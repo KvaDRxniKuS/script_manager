@@ -2,6 +2,8 @@
 rem ============================================================
 rem  App launcher (Windows) - thin wrapper that runs start.py
 rem  Double-click: runs python start.py (which starts server + browser)
+rem
+rem  If Python is not installed, it opens the download page.
 rem ============================================================
 setlocal
 
@@ -14,7 +16,12 @@ where python >nul 2>nul && set "PY=python"
 if not defined PY ( where py >nul 2>nul && set "PY=py -3" )
 
 if not defined PY (
-  echo [ERR] Python not found. Install from https://www.python.org/downloads/
+  echo.
+  echo [ERR] Python is not installed.
+  echo Opening the download page in your browser...
+  start "" "https://www.python.org/downloads/"
+  echo.
+  echo After installing Python, run this file again.
   pause
   exit /b 1
 )
