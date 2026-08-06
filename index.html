@@ -25,6 +25,9 @@
   .topbar .mode button{background:transparent;color:var(--muted);padding:6px 14px;
     border-radius:6px;font-size:13px;border:0;cursor:pointer}
   .topbar .mode button.active{background:var(--accent);color:#fff}
+  /* Бейдж-счётчик на кнопке вкладки «Перезвоны» */
+  .mode-badge{display:inline-block;background:#e74c3c;color:#fff;border-radius:999px;
+    min-width:18px;height:18px;line-height:18px;font-size:11px;font-weight:700;text-align:center;padding:0 5px;margin-left:4px}
   .topbar .save-state{font-size:12px;color:var(--muted);margin-right:8px}
   .topbar .save-state.dirty{color:var(--warn)}
   .topbar .save-state.saved{color:var(--ok)}
@@ -189,8 +192,10 @@
   /* Строка 1: время+дата | имя/телефон/коммент | действия */
   .call-main{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:18px;align-items:center}
   .call-when{display:flex;flex-direction:column;align-items:flex-start;gap:0;line-height:1.1;white-space:nowrap;min-width:0}
-  .call-when .big{font-size:30px;font-weight:700;color:#fff;font-variant-numeric:tabular-nums;white-space:nowrap}
-  .call-when .big-local{font-size:14px;font-weight:600;color:#8ea3c7;white-space:nowrap;margin-top:-2px}
+  .call-when .big{font-size:26px;font-weight:700;color:#fff;font-variant-numeric:tabular-nums;white-space:nowrap;display:inline-flex;align-items:baseline;gap:5px}
+  .call-when .big-shift{font-size:12px;font-weight:600;color:#8ea3c7;white-space:nowrap}
+  .call-when .big-local{font-size:12px;font-weight:600;color:#8ea3c7;white-space:nowrap;margin-top:-1px}
+  .call-when .next-time{font-size:12px;font-weight:700;color:#7fd8a8;white-space:nowrap}
   .call-when .date{font-size:15px;font-weight:500;color:#c8d3e8;white-space:nowrap;min-width:0;overflow:hidden;text-overflow:ellipsis}
   .call-when .hist{display:inline-flex;gap:3px;align-items:center;font-size:13px;color:var(--muted);white-space:nowrap}
   .call-when .hist .lbl{margin-right:2px}
@@ -615,7 +620,7 @@
 
   <div class="topbar">
     <span class="title">📞 Менеджер речевых модулей</span>
-    <span class="badge" style="font-size:11px;opacity:.7">v0.50</span>
+    <span class="badge" style="font-size:11px;opacity:.7">v0.52</span>
     <label class="bool-toggle" id="autosaveWrap" style="display:none;margin-right:8px;font-size:12px">
       <input type="checkbox" id="autosaveChk" checked> автосохранение
     </label>
@@ -624,7 +629,7 @@
     <button class="secondary" id="saveBtn" style="display:none">💾 Сохранить в файл</button>
     <div class="mode">
       <button id="modeWork" class="active">▶ Работа</button>
-      <button id="modeCalls">📞 Перезвоны</button>
+      <button id="modeCalls">📞 Перезвоны <span class="mode-badge" id="callsBadge" style="display:none"></span></button>
       <button id="modeEdit">⚙ Редактор</button>
     </div>
   </div>
@@ -2676,6 +2681,8 @@ function newCall(init){
     date: todayDateStr(),
     timeFrom: '',
     timeTo: '',
+    nextDate: '',   // фактическое время следующего перезвона (скрытый параметр)
+    nextTime: '',
     phone: '',
     parent: '',
     students: '',
@@ -2786,6 +2793,19 @@ function callResultLabel(id){ return (CALLS?.results||[]).includes(id)?id:''; }
    потом сегодня будущие, потом будущие по дате. Просроченные со вчера — в самый верх по убыванию давности? Нет:
    «первым должен быть тот который был раньше (дальше от текущего времени)» — т.о. самые давние просроченные выше.
 */
+/* Минуты от полуночи по фактическому времени следующего перезвона (nextTime),
+   иначе по окну С-ДО (timeFrom/timeTo). Без всего — большой (в конец). */
+function callDayMinutes(c){
+  if(c.nextTime){
+    const n = parseTime(c.nextTime);
+    if(n) return n.h*60+n.m;
+  }
+  const f = parseTime(c.timeFrom);
+  if(f) return f.h*60+f.m;
+  const t = parseTime(c.timeTo);
+  if(t) return t.h*60+t.m;
+  return 24*60+1;
+}
 function sortedCalls(list){
   const order = {overdue:0, today:1, upcoming:2, archived:3};
   return [...list].sort((a,b)=>{
@@ -2798,10 +2818,15 @@ function sortedCalls(list){
       const lb = b.history.length?b.history[b.history.length-1].ts:b.created;
       return lb-la;
     }
-    // Внутри группы — у кого самое раннее начало — тот выше
-    const sa = callStartDateTime(a)?.getTime() ?? 0;
-    const sb = callStartDateTime(b)?.getTime() ?? 0;
-    return sa-sb;
+    // Внутри группы — сортировка по времени звонка (времени дня), а не по дате.
+    // Вчерашний на 20:30 и сегодняшний на 12:30 → 12:30 раньше (по времени дня).
+    const sa = callDayMinutes(a);
+    const sb = callDayMinutes(b);
+    if(sa !== sb) return sa-sb;
+    // при равенстве времени — раньше тот, у кого дата раньше
+    const da = callStartDateTime(a)?.getTime() ?? 0;
+    const db = callStartDateTime(b)?.getTime() ?? 0;
+    return da-db;
   });
 }
 
@@ -2821,8 +2846,25 @@ function callsFilterList(items){
 let _callsNewFormVisible = false;
 let LAST_COPIED_CALL_ID = null; // id карточки, из которой последним скопирован номер
 
+/* Счётчик актуальных задач на кнопке вкладки «Перезвоны».
+   Актуальные = не в архиве и дата не в будущем (сегодня/вчера/без даты) —
+   т.е. есть что делать, даже если время «с» ещё не наступило. */
+function updateCallsBadge(){
+  const badge = document.getElementById('callsBadge');
+  if(!badge) return;
+  const now = new Date(); const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0,0,0,0);
+  const n = (CALLS.items||[]).filter(c=>{
+    if(c.archived) return false;
+    const cd = parseDate(c.date);
+    if(cd && cd.getTime() > today.getTime()) return false; // будущая дата — не актуальна
+    return true;
+  }).length;
+  if(n>0){ badge.style.display='inline-block'; badge.textContent = n>99 ? '99+' : n; }
+  else badge.style.display='none';
+}
 function renderCalls(){
   ensureCallsShape();
+  updateCallsBadge();
   const root = document.getElementById('callsList');
   const statsEl = document.getElementById('callsStats');
   const list = callsFilterList(CALLS.items);
@@ -2888,54 +2930,90 @@ function countCallsOnDate(c, dateStr){
      Галочка ignoreTz = «клиент разрешил звонить в любое время» — отключает это ограничение.
    - максимум 60 дней вперёд, дальше — фоллбэк на завтра в начало окна.
 */
+/* Минуты дня из строки времени 'HH:MM' или null. */
+function hmToMin(hhmm){
+  const p = parseTime(hhmm);
+  return p ? (p.h*60+p.m) : null;
+}
+/* Время последнего совершённого звонка (последняя запись истории, не «Перенос»)
+   в минутах от полуночи МСК. Если истории нет — текущее время МСК. */
+function lastCallMinutes(c, now){
+  const hist = (c.history||[]).filter(h=>h && h.ts && h.result && h.result!=='Перенос');
+  if(hist.length){
+    // время последнего звонка — из ts записи (момент нажатия НО/АО/Сброс),
+    // время дня берём как есть (это время МСК, в котором работает оператор)
+    const last = hist[hist.length-1];
+    const t = new Date(last.ts);
+    return t.getHours()*60 + t.getMinutes();
+  }
+  return now.getHours()*60 + now.getMinutes();
+}
+/* Рассчитать фактическое время следующего перезвона при НО/АО/Сброс:
+   - сдвиг +offsetHours (по умолчанию 3ч) ОТ времени последнего звонка (из истории),
+     округление вниз до 00/30: звонок в 16:31 → 19:30;
+   - если истории нет — от текущего момента;
+   - окно С-ДО (timeFrom/timeTo) — информационное, используется как РАМКИ отображения:
+     если кандидат выходит за рамки окна или за текущий день — переносим на следующий
+     день на время «с» карточки (или на кандидата, если «с» нет);
+   - не более maxPerDay попыток в МСК-день.
+*/
 function calcNextSlot(c, offsetHours){
   offsetHours = offsetHours||3;
   const maxPerDay = 3;
   const tz = (typeof c.tz==='number') ? c.tz : DEFAULT_TZ_UTC;
-  const shift = tz - DEFAULT_TZ_UTC;      // сдвиг клиента от МСК (часы)
+  const shift = tz - DEFAULT_TZ_UTC;
   const ignoreTz = !!c.ignoreTz;
-  // Окно звонка — в МСК. По умолчанию 8:00–21:00.
-  const winFrom = parseTime(c.timeFrom) || {h:8, m:0};
-  const winTo   = parseTime(c.timeTo)   || {h:21, m:0};
-  let fromM = winFrom.h*60+winFrom.m, toM = winTo.h*60+winTo.m;
-  if(toM <= fromM) toM = fromM + 30;
-
-  // Текущее время МСК (оператор работает по МСК)
-  const mskNow = clientNow(DEFAULT_TZ_UTC);
-  const mskNowM = mskNow.getHours()*60 + mskNow.getMinutes();
-  // Кандидат = сейчас МСК + offset, округлённый вниз до 00/30
-  const candM = mskNowM + offsetHours*60;
-  let candMin = Math.floor(candM/30)*30;
-
   const pad = n=>String(n).padStart(2,'0');
-  for(let dayOffset=0; dayOffset<60; dayOffset++){
-    const base = new Date(mskNow.getFullYear(), mskNow.getMonth(), mskNow.getDate()+dayOffset);
-    const dateStr = fmtDate(base); // МСК-дата
-    // Попытки звонка за этот МСК-день
-    const todayCount = (c.history||[]).filter(h=>{
-      if(!h.ts) return false;
-      if(h.result==='Перенос') return false;
-      return clientDateStrFromTs(h.ts, DEFAULT_TZ_UTC)===dateStr;
-    }).length;
-    if(todayCount >= maxPerDay) continue;
 
-    // Старт поиска: для текущего дня — от кандидата (но не раньше начала окна), для будущих — от начала окна
-    let slotStart = (dayOffset===0) ? Math.max(candMin, fromM) : fromM;
-    for(let t=slotStart; t < toM; t+=30){
-      // Слот не в прошлом (для текущего дня)
-      if(dayOffset===0 && t <= mskNowM) continue;
-      // Правило «не звонить после 21 по местному времени клиента» (и не раньше 8)
-      if(!ignoreTz){
-        const hh = Math.floor(t/60) + shift;
-        const localH = ((hh % 24) + 24) % 24;
-        if(localH < 8 || localH >= 21) continue;
-      }
-      return { date: dateStr, time: pad(Math.floor(t/60))+':'+pad(t%60) };
-    }
+  const mskNow = clientNow(DEFAULT_TZ_UTC); // текущее время в МСК
+  const nowM = mskNow.getHours()*60 + mskNow.getMinutes();
+  // база = время последнего звонка из истории (или сейчас)
+  const baseM = lastCallMinutes(c, mskNow);
+  // кандидат = база + offset, округление вниз до 00/30
+  const candM = Math.floor((baseM + offsetHours*60) / 30) * 30;
+
+  // допустимо ли время (не после 21 / не раньше 8 по местному клиента)
+  const okTime = m=>{
+    if(ignoreTz) return true;
+    const hh = Math.floor(m/60) + shift;
+    const localH = ((hh % 24) + 24) % 24;
+    return localH >= 8 && localH < 21;
+  };
+  // рамки окна С-ДО (информационные)
+  const fromM = hmToMin(c.timeFrom); // может быть null
+  const toM   = hmToMin(c.timeTo);
+  const inWindow = m => {
+    if(fromM!==null && m < fromM) return false;
+    if(toM!==null && m > toM) return false;
+    return true;
+  };
+  const countMskDay = (dateStr)=> (c.history||[]).filter(h=>{
+    if(!h.ts) return false;
+    if(h.result==='Перенос') return false;
+    return clientDateStrFromTs(h.ts, DEFAULT_TZ_UTC)===dateStr;
+  }).length;
+
+  const todayStr = fmtDate(mskNow);
+  // попытка в текущий день: кандидат сегодня, позже времени последнего звонка (базы),
+  // в окне и допустим. Сравниваем с baseM (время звонка), а не с nowM.
+  if(countMskDay(todayStr) < maxPerDay && candM < 24*60 && candM > baseM && inWindow(candM) && okTime(candM)){
+    return { date: todayStr, time: pad(Math.floor(candM/60))+':'+pad(candM%60) };
   }
-  // Фоллбэк: завтра в начало окна
+
+  // иначе — следующие дни на время «с» карточки (или кандидата, если «с» нет)
+  for(let dayOffset=1; dayOffset<60; dayOffset++){
+    const base = new Date(mskNow.getFullYear(), mskNow.getMonth(), mskNow.getDate()+dayOffset);
+    const dateStr = fmtDate(base);
+    if(countMskDay(dateStr) >= maxPerDay) continue;
+    let m = (fromM!==null) ? fromM : candM;
+    if(m >= 24*60) m = (fromM!==null) ? fromM : 8*60;
+    if(!inWindow(m) || !okTime(m)) continue;
+    return { date: dateStr, time: pad(Math.floor(m/60))+':'+pad(m%60) };
+  }
+  // фоллбэк
   const d = new Date(mskNow.getFullYear(), mskNow.getMonth(), mskNow.getDate()+1);
-  return { date: fmtDate(d), time: pad(Math.floor(fromM/60))+':'+pad(fromM%60) };
+  const fm = (fromM!==null) ? fromM : 8*60;
+  return { date: fmtDate(d), time: pad(Math.floor(fm/60))+':'+pad(fm%60) };
 }
 /* Автосдвиг при НО/АО/Сброс: +3 часа (с учётом лимитов). */
 function autoReschedule(c, resultLabel){
@@ -2947,9 +3025,12 @@ function autoReschedule(c, resultLabel){
     auto: true
   };
   c.history.push(entry);
-  c.date = slot.date;
-  c.timeFrom = slot.time;
-  // timeTo оставляем исходное
+  // Фактическое время следующего перезвона — скрытый параметр (nextDate/nextTime).
+  // С/ДО (timeFrom/timeTo) остаются информационными и НЕ меняются.
+  c.nextDate = slot.date;
+  c.nextTime = slot.time;
+  c.date = slot.date; // дата следующего звонка
+  // timeFrom/timeTo не трогаем — они информационные рамки
 }
 
 function buildCallCard(c){
@@ -2968,29 +3049,36 @@ function buildCallCard(c){
   /* === Строка 1: когда | имя+телефон / комментарий | действия === */
   const main = document.createElement('div'); main.className='call-main';
 
-  // --- когда: время (крупно) + местное время над датой + история + бейдж ---
+  // --- когда: окно С-ДО (крупно) + следующий перезвон (мелко) + дата ---
   const when = document.createElement('div'); when.className='call-when';
+  const tzShift = (typeof c.tz==='number') ? (c.tz - DEFAULT_TZ_UTC) : 0;
+  // крупно — информационное окно С–ДО
+  const bigLine = document.createElement('span'); bigLine.className='big';
+  const timeSpan = document.createElement('span'); timeSpan.className='big-time';
   let timeLabel = '—';
   if(c.timeFrom && c.timeTo) timeLabel = c.timeFrom+'–'+c.timeTo;
   else if(c.timeFrom) timeLabel = c.timeFrom;
   else if(c.timeTo)   timeLabel = 'до '+c.timeTo;
-  const big = document.createElement('span'); big.className='big'; big.textContent=timeLabel;
-  when.appendChild(big);
-  // местное время клиента при сдвиге != 0 — отдельной строкой над датой
-  const tzShift = (typeof c.tz==='number') ? (c.tz - DEFAULT_TZ_UTC) : 0;
-  if(tzShift !== 0 && (c.timeFrom || c.timeTo)){
-    const shiftLabel = (h,m)=>{ let t=(h*60+m+tzShift*60); t=((t%1440)+1440)%1440; return String(Math.floor(t/60)).padStart(2,'0')+':'+String(t%60).padStart(2,'0'); };
-    let loc;
-    if(c.timeFrom && c.timeTo){ const a=parseTime(c.timeFrom), b=parseTime(c.timeTo); if(a&&b) loc=shiftLabel(a.h,a.m)+'–'+shiftLabel(b.h,b.m); }
-    else if(c.timeFrom){ const a=parseTime(c.timeFrom); if(a) loc=shiftLabel(a.h,a.m); }
-    else if(c.timeTo){ const b=parseTime(c.timeTo); if(b) loc='до '+shiftLabel(b.h,b.m); }
-    if(loc){
-      const locSpan = document.createElement('span'); locSpan.className='big-local';
-      locSpan.textContent='('+loc+')';
-      locSpan.title='Местное время клиента ('+tzShift+' ч от МСК)';
-      when.appendChild(locSpan);
-    }
+  timeSpan.textContent = timeLabel;
+  bigLine.appendChild(timeSpan);
+  // сдвиг рядом
+  const shiftSpan = document.createElement('span'); shiftSpan.className='big-shift';
+  shiftSpan.textContent = (tzShift>0?'+':'')+tzShift;
+  shiftSpan.title = 'Сдвиг от МСК: '+(tzShift>0?'+':'')+tzShift+' ч';
+  bigLine.appendChild(shiftSpan);
+  when.appendChild(bigLine);
+  // мелко — фактическое время следующего перезвона (next), если есть
+  if(c.nextTime){
+    const nx = document.createElement('span'); nx.className='next-time';
+    nx.textContent = 'следующий: '+c.nextTime;
+    nx.title = 'Время следующего перезвона ('+(c.nextDate||'')+')';
+    when.appendChild(nx);
   }
+  // текущее время клиента — мелко (всегда)
+  const nowSpan = document.createElement('span'); nowSpan.className='big-local';
+  nowSpan.textContent = '('+clientTimeStr(c.tz)+')';
+  nowSpan.title = 'Сейчас у клиента';
+  when.appendChild(nowSpan);
   // дата — второй строкой
   const date = document.createElement('span'); date.className='date';
   when.appendChild(date);
@@ -3100,15 +3188,15 @@ function buildCallCard(c){
     a.onclick=(e)=>e.stopPropagation();
     linksBox.appendChild(a);
   };
-  if(crmUrl) addLinkBtn('Звонок', crmUrl, 'zvonok');
+  // Кнопка «Звонок» ведёт ТОЛЬКО по ссылке «Звонок» (не по админке).
+  if(crmLink && crmLink.url && String(crmLink.url).trim()) addLinkBtn('Звонок', crmLink.url, 'zvonok');
+  else if(!(c.links||[]).some(l=>l.label && l.label!=='Звонок' && l.url && String(l.url).trim())){
+    const d=document.createElement('span'); d.className='link-btn zvonok disabled'; d.textContent='Звонок';
+    linksBox.appendChild(d);
+  }
   (c.links||[]).filter(l=>l.label && l.label!=='Звонок' && l.url && String(l.url).trim()).forEach(l=>{
     addLinkBtn(l.label, l.url, 'admin');
   });
-  if(!linksBox.children.length){
-    const a=document.createElement('span'); a.className='link-btn zvonok disabled'; a.textContent='Звонок';
-    a.title='Нет ссылки на CRM';
-    linksBox.appendChild(a);
-  }
 
   if(!c.archived){
     const res=document.createElement('div'); res.className='call-result';
@@ -7714,6 +7802,6 @@ autosizeAll(document);
 
 
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f"}' crossorigin="anonymous"></script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a26932cd192af12e',t:'MTc4NTk2ODUyNA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f"}' crossorigin="anonymous"></script>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a26fc5629f11f112',t:'MTc4NjAzNzQ0Mg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f"}' crossorigin="anonymous"></script>
 </body>
 </html>

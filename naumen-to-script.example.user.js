@@ -1,13 +1,12 @@
 // ==UserScript==
 // @name         Naumen → Речевой скрипт: передать клиента (ШАБЛОН)
 // @namespace    local.naumen.script.bridge
-// @version      0.1.7
-// @description  Плавающая кнопка в Naumen Webphone: вытаскивает ссылку Bitrix и строку клиента,
+// @version      0.2.0
+// @description  Плавающая кнопка в Naumen Webphone: вытаскивает ссылку CRM и строку клиента,
 //               передаёт данные в локальный index.html речевого скрипта.
-//               ВАЖНО: в шаблоне НЕТ зашитого Bitrix-токена. Введите свой вебхук через localStorage
-//               (см. инструкцию внизу), иначе подтяжка имени из Bitrix работать не будет.
-// @match        https://tetrika.nau.team:8443/webphone*
-// @match        https://tetrika.nau.team:8443/*
+//               АДАПТИРУЕМЫЙ: домены Naumen и CRM задаются через localStorage — подойдёт
+//               для любых адресов, а не только Тетрики. Токена в коде НЕТ.
+// @match        *://*/*
 // @grant        GM_xmlhttpRequest
 // @run-at       document-idle
 // ==/UserScript==
@@ -17,14 +16,29 @@
 
   if(window.top !== window.self) return;
 
-  // Если запускаешь index.html через локальный сервер — оставь так.
+  // === НАСТРОЙКИ (можно менять прямо здесь или через localStorage) ===
+
+  // Адрес, где открыто приложение (index.html). Обычно локальный сервер.
   const SCRIPT_URL = localStorage.getItem('rm_bridge_script_url') || 'http://localhost:8000/index.html';
 
-  const BITRIX_RE = /https?:\/\/bitrix\.tetrika\.school\/crm\/(contact|deal|lead)\/details\/\d+\/?/i;
+  // Домен Naumen, на котором ищем ссылку на карточку клиента.
+  // Задайте через localStorage, например:
+  //   localStorage.setItem('rm_naumen_host', 'tetrika.nau.team:8443')
+  // По умолчанию — пример Тетрики (можно заменить на свой, оставить пустым — поиск по любому URL).
+  const NAUMEN_HOST = localStorage.getItem('rm_naumen_host') || 'tetrika.nau.team';
 
-  // БЕЗОПАСНО: нет зашитого токена. Вебхук задаётся вручную через localStorage:
-  //   localStorage.setItem('rm_bitrix_webhook', 'https://bitrix.../rest/ID/TOKEN/')
-  // Если не задан — подтяжка имени из Bitrix просто пропускается (без ошибок).
+  // Домен CRM (Bitrix), из ссылки которого извлекается ID карточки клиента.
+  // Пример:   localStorage.setItem('rm_crm_host', 'bitrix.example.ru')
+  const CRM_HOST = localStorage.getItem('rm_crm_host') || 'bitrix.tetrika.school';
+
+  // === /НАСТРОЙКИ ===
+
+  // Собираем регулярку для ссылки на карточку в CRM: https://ХОСТ/crm/(contact|deal|lead)/details/ID
+  const _h = CRM_HOST.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+  const BITRIX_RE = new RegExp('https?:\\/\\/'+_h+'\\/crm\\/(contact|deal|lead)\\/details\\/\\d+\\/?','i');
+
+  // БЕЗОПАСНО: токен не зашит. Вебхук задаётся через localStorage:
+  //   localStorage.setItem('rm_bitrix_webhook', 'https://ХОСТ/rest/ID/TOKEN/')
   function getBitrixWebhook() {
     return localStorage.getItem('rm_bitrix_webhook') || '';
   }
@@ -44,9 +58,7 @@
       if(win.document && !out.includes(win.document)) out.push(win.document);
       const frames = win.document ? Array.from(win.document.querySelectorAll('iframe, frame')) : [];
       frames.forEach(fr => {
-        try{
-          if(fr.contentWindow) getDocs(fr.contentWindow, out);
-        }catch(e){}
+        try{ if(fr.contentWindow) getDocs(fr.contentWindow, out); }catch(e){}
       });
     }catch(e){}
     return out;
@@ -90,7 +102,7 @@
       if(sc>=4) candidates.push({txt, sc});
     });
     const bodyText = norm(doc.body?.innerText || '');
-    const m = bodyText.match(new RegExp('(?:^|\\s)Р\\s+[А-ЯЁA-Z][А-ЯЁA-Zа-яёa-z-]*(?:\\s+[^\\n\\r]{0,80})?\\s+У\\s+[А-ЯЁA-Z][А-ЯЁA-Zа-яёa-z-]*(?:\\s+\\d{1,2}\\s*(?:кл|класс)?)?(?:[,;]\\s*У\\s+[А-ЯЁA-Z][А-ЯЁA-Zа-яёa-z-]*(?:\\s+\\d{1,2}\\s*(?:кл|класс)?)?)*', 'i'));
+    const m = bodyText.match(new RegExp('(?:^|\\s)Р\\s+[А-ЯЁA-Z][А-ЯЁA-Zа-яёa-z-]*(?:\\s+[^\\n\\r]{0,80})?\\s+У\\s+[А-ЯЁA-Z][А-ЯЁA-Zа-яёa-z-]*(?:\\s+\\d{1,2}\\s*(?:кл|класс)?)?(?:[,;]\\s*У\\s+[А-ЯЁA-Z][А-ЯЁA-Zа-яёa-z-]*(?:\\s+\\d{1,2}\\s*(?:кл|класс)?)?)*','i'));
     if(m){
       const txt = norm(m[0]);
       const sc = scoreClientLine(txt) + 1;
@@ -115,7 +127,6 @@
   }
 
   async function fetchClientNameFromBitrix(url){
-    // Без заданного вебхука (localStorage.rm_bitrix_webhook) ничего не запрашиваем.
     const webhook = getBitrixWebhook();
     if(!webhook) return '';
 
@@ -134,7 +145,7 @@
       return null;
     };
 
-    const clientPattern = new RegExp('(?:^|\\s)Р\\s+[А-ЯЁA-Z][А-ЯЁA-Zа-яёa-z-]*(?:\\s+[^\\n\\r]{0,80})?\\s+У\\s+[А-ЯЁA-Z][А-ЯЁA-Zа-яёa-z-]*(?:\\s+\\d{1,2}\\s*(?:кл|класс)?)?(?:[,;]\\s*У\\s+[А-ЯЁA-Z][А-ЯЁA-Zа-яёa-z-]*(?:\\s+\\d{1,2}\\s*(?:кл|класс)?)?)*', 'i');
+    const clientPattern = new RegExp('(?:^|\\s)Р\\s+[А-ЯЁA-Z][А-ЯЁA-Zа-яёa-z-]*(?:\\s+[^\\n\\r]{0,80})?\\s+У\\s+[А-ЯЁA-Z][А-ЯЁA-Zа-яёa-z-]*(?:\\s+\\d{1,2}\\s*(?:кл|класс)?)?(?:[,;]\\s*У\\s+[А-ЯЁA-Z][А-ЯЁA-Zа-яёa-z-]*(?:\\s+\\d{1,2}\\s*(?:кл|класс)?)?)*','i');
 
     try {
       const method = 'crm.' + type + '.get';
@@ -232,7 +243,7 @@
   function showDebug(payload){
     const ok = payloadUseful(payload);
     alert((ok ? 'Naumen → скрипт: данные найдены' : 'Naumen → скрипт: данные клиента не найдены')+
-      '\n\nBitrix: '+(payload.bitrixUrl||'не найдено')+
+      '\n\nCRM: '+(payload.bitrixUrl||'не найдено')+
       '\nТелефон: '+(payload.phone_number||'не найден')+
       '\nСтрока: '+(payload.raw||'не найдена')+
       '\nРодитель: '+(payload.parentName||'-')+
@@ -292,13 +303,21 @@
 })();
 
 /* ============================================================
-   ИНСТРУКЦИЯ (для себя, можно удалить):
-   Чтобы включить подтяжку имени клиента из Bitrix, задайте свой вебхук:
-   1) Откройте консоль браузера на странице tetrika.nau.team.
-   2) Вставьте и выполните:
-        localStorage.setItem('rm_bitrix_webhook', 'https://bitrix.tetrika.school/rest/ВАШ_ID/ВАШ_ТОКЕН/');
-      Замените ВАШ_ID / ВАШ_ТОКЕН на данные вашего Bitrix-вебхука (Битрикс24 → Разработчикам → Другие → REST API → добавить вебхук, права: crm.*).
-   3) Скрипт подхватит его автоматически (localStorage имеет приоритет).
-   Если вебхук не задан — скрипт работает, но имя из Bitrix не добирает (без ошибок).
-   НЕ вшивайте токен в код, если планируете публиковать скрипт.
+   ИНСТРУКЦИЯ (адаптация под свой колл-центр):
+   Все домены задаются через localStorage (в консоли браузера на странице Naumen):
+
+   1) Домен Naumen (по умолчанию tetrika.nau.team):
+        localStorage.setItem('rm_naumen_host', 'ВАШ_ДОМЕН_НАУМЕН')
+   2) Домен CRM/Bitrix (по умолчанию bitrix.tetrika.school):
+        localStorage.setItem('rm_crm_host', 'ВАШ_ДОМЕН_CRM')
+   3) Вебхук Bitrix (для подтяжки имени клиента):
+        localStorage.setItem('rm_bitrix_webhook', 'https://ВАШ_ДОМЕН_CRM/rest/ВАШ_ID/ВАШ_ТОКЕН/')
+      (Битрикс24 → Разработчикам → Другие → REST API → добавить вебхук, права: crm.*)
+   4) Адрес приложения, если не localhost:8000:
+        localStorage.setItem('rm_bridge_script_url', 'http://127.0.0.1:8000/index.html')
+
+   Также @match стоит *://*/* — скрипт работает на любом сайте. Если хотите ограничить
+   конкретным доменом Naumen, замените вверху @match, например:
+        // @match        https://ВАШ_ДОМЕН_НАУМЕН/*
+   НЕ вшивайте токены в код, если планируете публиковать скрипт.
 ============================================================ */
