@@ -192,8 +192,8 @@
   /* Строка 1: время+дата | имя/телефон/коммент | действия */
   .call-main{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:18px;align-items:center}
   .call-when{display:flex;flex-direction:column;align-items:flex-start;gap:0;line-height:1.1;white-space:nowrap;min-width:0}
-  .call-when .big{font-size:26px;font-weight:700;color:#fff;font-variant-numeric:tabular-nums;white-space:nowrap;display:inline-flex;align-items:baseline;gap:5px}
-  .call-when .big-shift{font-size:12px;font-weight:600;color:#8ea3c7;white-space:nowrap}
+  .call-when .big{font-size:30px;font-weight:700;color:#fff;font-variant-numeric:tabular-nums;white-space:nowrap;display:inline-flex;align-items:baseline;gap:5px}
+  .call-when .big-shift{font-size:20px;font-weight:800;color:#ffd089;white-space:nowrap}
   .call-when .big-local{font-size:12px;font-weight:600;color:#8ea3c7;white-space:nowrap;margin-top:-1px}
   .call-when .next-time{font-size:12px;font-weight:700;color:#7fd8a8;white-space:nowrap}
   .call-when .date{font-size:15px;font-weight:500;color:#c8d3e8;white-space:nowrap;min-width:0;overflow:hidden;text-overflow:ellipsis}
@@ -620,7 +620,7 @@
 
   <div class="topbar">
     <span class="title">📞 Менеджер речевых модулей</span>
-    <span class="badge" style="font-size:11px;opacity:.7">v0.52</span>
+    <span class="badge" style="font-size:11px;opacity:.7">v0.53</span>
     <label class="bool-toggle" id="autosaveWrap" style="display:none;margin-right:8px;font-size:12px">
       <input type="checkbox" id="autosaveChk" checked> автосохранение
     </label>
@@ -3061,11 +3061,13 @@ function buildCallCard(c){
   else if(c.timeTo)   timeLabel = 'до '+c.timeTo;
   timeSpan.textContent = timeLabel;
   bigLine.appendChild(timeSpan);
-  // сдвиг рядом
-  const shiftSpan = document.createElement('span'); shiftSpan.className='big-shift';
-  shiftSpan.textContent = (tzShift>0?'+':'')+tzShift;
-  shiftSpan.title = 'Сдвиг от МСК: '+(tzShift>0?'+':'')+tzShift+' ч';
-  bigLine.appendChild(shiftSpan);
+  // сдвиг рядом — показываем только если != 0
+  if(tzShift !== 0){
+    const shiftSpan = document.createElement('span'); shiftSpan.className='big-shift';
+    shiftSpan.textContent = (tzShift>0?'+':'')+tzShift;
+    shiftSpan.title = 'Сдвиг от МСК: '+(tzShift>0?'+':'')+tzShift+' ч';
+    bigLine.appendChild(shiftSpan);
+  }
   when.appendChild(bigLine);
   // мелко — фактическое время следующего перезвона (next), если есть
   if(c.nextTime){
@@ -7802,6 +7804,6 @@ autosizeAll(document);
 
 
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f"}' crossorigin="anonymous"></script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a26fc5629f11f112',t:'MTc4NjAzNzQ0Mg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f"}' crossorigin="anonymous"></script>
-</body>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f"}' crossorigin="anonymous"></script>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a26fe535dba5f12e',t:'MTc4NjAzODc0Ng=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>

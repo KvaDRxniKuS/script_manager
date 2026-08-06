@@ -76,15 +76,12 @@ def main():
                 elif rv == lv:
                     print("  [OK]", APP_FILE, "is up to date")
                 else:
-                    ans = input("  Update local file? (y/N): ").strip().lower()
-                    if ans in ("y", "yes"):
-                        if os.path.exists(APP_FILE):
-                            os.replace(APP_FILE, APP_FILE + ".bak")
-                        with open(APP_FILE, "w", encoding="utf-8") as f:
-                            f.write(remote)
-                        print("  [OK] Updated. Old version kept as", APP_FILE + ".bak")
-                    else:
-                        print("  Skipping update (keeping current version)")
+                    # автообновление без запроса
+                    if os.path.exists(APP_FILE):
+                        os.replace(APP_FILE, APP_FILE + ".bak")
+                    with open(APP_FILE, "w", encoding="utf-8") as f:
+                        f.write(remote)
+                    print(f"  [OK] Updated to {rv} (old kept as", APP_FILE + ".bak)")
     else:
         print("Auto-update disabled (REPO_RAW empty)")
 
