@@ -194,8 +194,9 @@
   .call-when{display:flex;flex-direction:column;align-items:flex-start;gap:0;line-height:1.1;white-space:nowrap;min-width:0}
   .call-when .big{font-size:30px;font-weight:700;color:#fff;font-variant-numeric:tabular-nums;white-space:nowrap;display:inline-flex;align-items:baseline;gap:5px}
   .call-when .big-shift{font-size:20px;font-weight:800;color:#ffd089;white-space:nowrap}
-  .call-when .big-local{font-size:12px;font-weight:600;color:#8ea3c7;white-space:nowrap;margin-top:-1px}
-  .call-when .next-time{font-size:12px;font-weight:700;color:#7fd8a8;white-space:nowrap}
+  .call-when .big-local{font-size:14px;font-weight:700;color:#9fb0cd;white-space:nowrap}
+  .call-when .next-time{font-size:14px;font-weight:700;color:#7fd8a8;white-space:nowrap}
+  .call-when .sub-line{display:inline-flex;align-items:baseline;gap:7px;white-space:nowrap;margin-top:1px}
   .call-when .date{font-size:15px;font-weight:500;color:#c8d3e8;white-space:nowrap;min-width:0;overflow:hidden;text-overflow:ellipsis}
   .call-when .hist{display:inline-flex;gap:3px;align-items:center;font-size:13px;color:var(--muted);white-space:nowrap}
   .call-when .hist .lbl{margin-right:2px}
@@ -620,7 +621,7 @@
 
   <div class="topbar">
     <span class="title">📞 Менеджер речевых модулей</span>
-    <span class="badge" style="font-size:11px;opacity:.7">v0.56</span>
+    <span class="badge" style="font-size:11px;opacity:.7">v0.57</span>
     <label class="bool-toggle" id="autosaveWrap" style="display:none;margin-right:8px;font-size:12px">
       <input type="checkbox" id="autosaveChk" checked> автосохранение
     </label>
@@ -3003,9 +3004,9 @@ function calcNextSlot(c, offsetHours){
   }).length;
 
   const todayStr = fmtDate(mskNow);
-  // попытка в текущий день: кандидат сегодня, позже времени последнего звонка (базы),
-  // в окне и допустим. Сравниваем с baseM (время звонка), а не с nowM.
-  if(countMskDay(todayStr) < maxPerDay && candM < 24*60 && candM > baseM && inWindow(candM) && okTime(candM)){
+  // попытка в текущий день: кандидат сегодня, в БУДУЩЕМ относительно текущего времени,
+  // в окне и допустим.
+  if(countMskDay(todayStr) < maxPerDay && candM < 24*60 && candM > nowM && inWindow(candM) && okTime(candM)){
     return { date: todayStr, time: pad(Math.floor(candM/60))+':'+pad(candM%60) };
   }
 
@@ -3058,19 +3059,18 @@ function buildCallCard(c){
   /* === Строка 1: когда | имя+телефон / комментарий | действия === */
   const main = document.createElement('div'); main.className='call-main';
 
-  // --- когда: окно С-ДО (крупно) + следующий перезвон (мелко) + дата ---
+  // --- когда: окно С–ДО (крупно) + следующий перезвон + локальное время + дата ---
   const when = document.createElement('div'); when.className='call-when';
   const tzShift = (typeof c.tz==='number') ? (c.tz - DEFAULT_TZ_UTC) : 0;
-  // крупно — информационное окно С–ДО
+  // строка 1: окно С–ДО (крупно) + сдвиг
   const bigLine = document.createElement('span'); bigLine.className='big';
   const timeSpan = document.createElement('span'); timeSpan.className='big-time';
   let timeLabel = '—';
-  if(c.timeFrom && c.timeTo) timeLabel = c.timeFrom+'–'+c.timeTo;
-  else if(c.timeFrom) timeLabel = c.timeFrom;
-  else if(c.timeTo)   timeLabel = 'до '+c.timeTo;
+  if(c.timeFrom && c.timeTo) timeLabel = 'С '+c.timeFrom+'  ДО '+c.timeTo;
+  else if(c.timeFrom) timeLabel = 'С '+c.timeFrom;
+  else if(c.timeTo)   timeLabel = 'ДО '+c.timeTo;
   timeSpan.textContent = timeLabel;
   bigLine.appendChild(timeSpan);
-  // сдвиг рядом — показываем только если != 0
   if(tzShift !== 0){
     const shiftSpan = document.createElement('span'); shiftSpan.className='big-shift';
     shiftSpan.textContent = (tzShift>0?'+':'')+tzShift;
@@ -3078,19 +3078,20 @@ function buildCallCard(c){
     bigLine.appendChild(shiftSpan);
   }
   when.appendChild(bigLine);
-  // мелко — фактическое время следующего перезвона (next), если есть
+  // строка 2: следующий перезвон + локальное время клиента
+  const subLine = document.createElement('span'); subLine.className='sub-line';
   if(c.nextTime){
     const nx = document.createElement('span'); nx.className='next-time';
-    nx.textContent = 'следующий: '+c.nextTime;
+    nx.textContent = 'след: '+c.nextTime;
     nx.title = 'Время следующего перезвона ('+(c.nextDate||'')+')';
-    when.appendChild(nx);
+    subLine.appendChild(nx);
   }
-  // текущее время клиента — мелко (всегда)
   const nowSpan = document.createElement('span'); nowSpan.className='big-local';
   nowSpan.textContent = '('+clientTimeStr(c.tz)+')';
   nowSpan.title = 'Сейчас у клиента';
-  when.appendChild(nowSpan);
-  // дата — второй строкой
+  subLine.appendChild(nowSpan);
+  when.appendChild(subLine);
+  // строка 3: дата
   const date = document.createElement('span'); date.className='date';
   when.appendChild(date);
   const d = parseDate(c.date);
@@ -3119,7 +3120,7 @@ function buildCallCard(c){
       else if(/сброс|занят/.test(r)) dot.classList.add('sb');
       else if(/перезво|callback/.test(r)) dot.classList.add('cb');
       else dot.classList.add('no');
-      dot.title=h.result+' · '+(new Date(h.ts)).toLocaleString('ru-RU',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+      dot.title=h.result+' · '+(new Date(h.ts)).toLocaleString('ru-RU',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
       hist.appendChild(dot);
     });
     when.appendChild(hist);
@@ -3269,7 +3270,7 @@ function buildCallCard(c){
     c.history.slice().reverse().forEach(ev=>{
       const row=document.createElement('div'); row.className='hist-row';
       const t=document.createElement('span'); t.className='t';
-      t.textContent=new Date(ev.ts).toLocaleString('ru-RU',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+      t.textContent=new Date(ev.ts).toLocaleString('ru-RU',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
       const txt=document.createElement('span');
       let s = ev.result||'—';
       if(ev.newDate) s += ' → '+ev.newDate+(ev.newFrom?' '+ev.newFrom:'')+(ev.reason?' ('+ev.reason+')':(ev.auto?' (авто)':''));
@@ -3418,7 +3419,11 @@ function buildCallForm(c){
     autoParent = pull('parent_name')||pull('parentName')||pull('parent')||pull('client_name')||'';
     autoPhone  = pull('phone')||pull('parent_phone')||pull('client_phone')||'';
   }
-  const fPhone = mkField('Телефон','text', (c?.phone||autoPhone)||'', '+7...');
+  const fPhone = mkField('Телефон','text', (c?.phone||autoPhone)||'', '7...');
+  // запрет на ввод «+» и лишних символов в номере телефона
+  fPhone.input.addEventListener('input', ()=>{
+    fPhone.input.value = fPhone.input.value.replace(/[^0-9]/g,'');
+  });
   const fParent = mkField('Родитель','text', (c?.parent||autoParent)||'');
   row2.appendChild(fPhone.labelWrap); row2.appendChild(fParent.labelWrap);
   wrap.appendChild(row2);
@@ -5719,7 +5724,7 @@ function renderModuleForm(id, m){
         const blocks = getBlocks(m);
         let newBlk;
         if(type==='text')       newBlk = {type:'text', text:''};
-        else if(type==='buttons') newBlk = {type:'buttons', items:[{label:'Новая кнопка', next:''}]};
+        else if(type==='buttons') newBlk = {type:'buttons', items:[]};
         if(newBlk){
           blocks.push(newBlk);
           markDirty('scripts');
@@ -7794,8 +7799,10 @@ function renderCallsIfIdle(){
   renderCalls();
 }
 setInterval(()=>{
+  // Обновляем бейдж актуальных перезвонов на кнопке вкладки — независимо от открытой вкладки.
+  if(typeof updateCallsBadge==='function') updateCallsBadge();
   if(MODE==='calls') renderCallsIfIdle();
-}, 60000);
+}, 30000);
 
 /* Глобальный MutationObserver — автосайз для любых textarea, которые появляются в DOM */
 new MutationObserver(muts=>{
@@ -7813,5 +7820,5 @@ autosizeAll(document);
 
 
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f"}' crossorigin="anonymous"></script>
-</body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a2870d819d65f105',t:'MTc4NjI4MTU2OQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
