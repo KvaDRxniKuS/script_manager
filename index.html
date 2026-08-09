@@ -620,7 +620,7 @@
 
   <div class="topbar">
     <span class="title">📞 Менеджер речевых модулей</span>
-    <span class="badge" style="font-size:11px;opacity:.7">v0.55</span>
+    <span class="badge" style="font-size:11px;opacity:.7">v0.56</span>
     <label class="bool-toggle" id="autosaveWrap" style="display:none;margin-right:8px;font-size:12px">
       <input type="checkbox" id="autosaveChk" checked> автосохранение
     </label>
@@ -2659,12 +2659,20 @@ function callTags(c){
   const t = parseTime(c.timeTo);
   const fromM = f ? (f.h*60+f.m) : null;
   const toM   = t ? (t.h*60+t.m) : null;
+  // фактическое время следующего перезвона (если есть — оно приоритетнее окна С-ДО)
+  const n = parseTime(c.nextTime);
+  const nextM = n ? (n.h*60+n.m) : null;
 
   if(cdMs > today.getTime()){ tags.push('upcoming'); return tags; } // дата в будущем
 
   tags.push('today'); // сегодня / прошлая дата / без даты — нужно сделать сегодня
-  if(fromM !== null && nowM < fromM) tags.push('upcoming');   // время «с» ещё не наступило
-  if(toM !== null && nowM > toM)     tags.push('overdue');    // окно «до» уже прошло
+
+  // «не пора ещё»: если есть nextTime — по нему; иначе по времени «с» окна
+  if(nextM !== null && nowM < nextM) tags.push('upcoming');
+  else if(nextM === null && fromM !== null && nowM < fromM) tags.push('upcoming');
+
+  // просрочен (окно «до» уже прошло) — окно остаётся рамкой
+  if(toM !== null && nowM > toM) tags.push('overdue');
   return tags;
 }
 /* Основной статус для сортировки и оформления карточки. */
@@ -7805,6 +7813,5 @@ autosizeAll(document);
 
 
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f"}' crossorigin="anonymous"></script>
-<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f"}' crossorigin="anonymous"></script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a27509c0eeb1f11f',t:'MTc4NjA5MjY3Mg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</body>
 </html>
