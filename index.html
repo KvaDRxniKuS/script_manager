@@ -226,6 +226,7 @@
   /* Выделение карточки, из которой последним скопирован номер */
   .call-card.copied-num{background:#16301f;border-color:#2ecc71;box-shadow:0 0 0 1px rgba(46,204,113,.5), 0 2px 8px rgba(46,204,113,.25)}
   .call-info .comment{font-size:15px;color:#d8e2f2;white-space:normal;word-wrap:break-word;min-width:0}
+  .call-info .call-result-field{font-size:14px;color:#a9f0c3;background:rgba(46,204,113,.12);border:1px dashed rgba(46,204,113,.4);border-radius:6px;padding:3px 8px;white-space:normal;word-wrap:break-word;min-width:0}
 
   .call-acts{display:flex;gap:6px;align-items:center}
   .call-acts button{padding:5px 14px;font-size:14px;border-radius:6px}
@@ -278,6 +279,14 @@
   .call-form .tz-row .ignore-tz input[type=checkbox]{width:18px;height:18px;accent-color:var(--accent)}
   .call-form .parent-phone-row{grid-template-columns:1fr 1fr}
   .btn-small{padding:5px 10px;font-size:12px;border-radius:4px;border:1px solid var(--line);background:#1a2030;color:#cfe0ff;cursor:pointer}
+  /* Модальное окно ввода результата звонка */
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:100000}
+  .modal-box{background:#171d2a;border:1px solid var(--line);border-radius:12px;padding:18px;width:min(520px,90vw);box-shadow:0 12px 40px rgba(0,0,0,.5)}
+  .modal-box h3{margin:0 0 8px;font-size:16px;color:#fff}
+  .modal-box .modal-hint{font-size:12px;color:var(--muted);margin-bottom:10px}
+  .modal-box textarea{width:100%;min-height:80px;background:#0c0f15;border:1px solid var(--line);color:#f0f4fb;border-radius:6px;padding:8px 10px;font:inherit;resize:vertical}
+  .modal-box .modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
+  .modal-box .modal-actions button{padding:7px 14px;font-size:13px}
   .btn-small:hover{border-color:var(--accent);color:#fff}
   .btn-small.danger{border-color:rgba(231,76,60,.5);color:#ff8a80}
   .btn-small.danger:hover{background:rgba(231,76,60,.15);border-color:#e74c3c;color:#fff}
@@ -632,7 +641,7 @@
 
   <div class="topbar">
     <span class="title">📞 Менеджер речевых модулей</span>
-    <span class="badge" style="font-size:11px;opacity:.7">v0.59</span>
+    <span class="badge" style="font-size:11px;opacity:.7">v0.60</span>
     <label class="bool-toggle" id="autosaveWrap" style="display:none;margin-right:8px;font-size:12px">
       <input type="checkbox" id="autosaveChk" checked> автосохранение
     </label>
@@ -2717,6 +2726,7 @@ function newCall(init){
     subject: '',
     reason: '',
     notes: '',
+    result: '',           // результат звонка (вводится при дозвоне, виден на карточке)
     links: [],
     history: [],
     archived: false,
@@ -3185,7 +3195,10 @@ function buildCallCard(c){
   const crmLink=(c.links||[]).find(l=>l.label==='Звонок');
   const crmUrl=(crmLink&&crmLink.url&&String(crmLink.url).trim())?String(crmLink.url).trim()
     :(()=>{const a=(c.links||[]).find(l=>l.label&&l.label.indexOf('Админка')===0);return (a&&a.url&&String(a.url).trim())?String(a.url).trim():'';})();
-  const phoneDisplay=(c.phone&&String(c.phone).trim())?String(c.phone).trim():extractCalledFromUrl(crmUrl);
+  // Номер: 1) поле phone, 2) из ссылки «Звонок» (called=), 3) из комментария (маски +79/79/89)
+  const phoneDisplay = (c.phone && String(c.phone).trim())
+    ? String(c.phone).trim()
+    : (extractCalledFromUrl(crmUrl) || extractPhoneFromText(c.notes || ''));
   if(phoneDisplay){
     const ph=document.createElement('span'); ph.className='phone';
     const num=document.createElement('span'); num.className='phone-num'; num.textContent=phoneDisplay;
@@ -3213,13 +3226,21 @@ function buildCallCard(c){
     const cmt=document.createElement('div'); cmt.className='comment'; cmt.textContent=comment;
     info.appendChild(cmt);
   }
+  // результат звонка — отдельное поле (видно сразу, если заполнен)
+  const callResult=(c.result||'').trim();
+  if(callResult){
+    const res=document.createElement('div'); res.className='call-result-field';
+    res.textContent='📋 '+callResult;
+    res.title='Результат звонка';
+    info.appendChild(res);
+  }
   main.appendChild(info);
 
   // --- действия справа: дозвонился / удалить / редактировать ---
   const acts = document.createElement('div'); acts.className='call-acts';
   const editHandler=()=>{ c._editOpen=true; renderCalls(); const form=document.querySelector('.call-form-edit-'+c.id); if(form) form.scrollIntoView({behavior:'smooth',block:'center'}); };
   if(!c.archived){
-    acts.appendChild(actBtn('✓','ok','Дозвонился (в архив)',()=>{ c.history.push({ts:Date.now(),result:'Дозвонился'}); c.archived=true; callsMarkDirty(); renderCalls(); }));
+    acts.appendChild(actBtn('✓','ok','Дозвонился — указать результат',()=>{ openCallResultModal(c); }));
     acts.appendChild(actBtn('×','danger','Удалить',()=>{ if(confirm('Удалить перезвон?')){ CALLS.items=CALLS.items.filter(x=>x.id!==c.id); callsMarkDirty(); renderCalls(); } }));
     acts.appendChild(actBtn('✎','','Редактировать карточку',editHandler));
   } else {
@@ -3422,6 +3443,16 @@ function extractCalledFromUrl(url){
   }catch(e){}
   return '';
 }
+/* Найти телефон в тексте (комментарии) по маскам +79…, 79…, 89….
+   Нормализация: 8 в начале -> 7, символ «+» убирается. */
+function extractPhoneFromText(text){
+  if(!text) return '';
+  const m = String(text).match(/(?<!\d)(?:\+?[78]9\d{9})(?!\d)/);
+  if(!m) return '';
+  let n = m[0].replace(/\D/g,'');
+  if(n.length===11 && n[0]==='8') n = '7'+n.slice(1);
+  return n;
+}
 /* Нормализация массива ссылок: гарантируем «Звонок» первым и «Админка» второй. */
 function normalizeCallLinks(c){
   const links = (c?.links||[]).filter(x=>x && (x.url||x.label)).map(x=>({label:x.label||'',url:x.url||''}));
@@ -3607,6 +3638,44 @@ function callMarkResult(id, result, archive){
   c.history.push({ts:Date.now(), result});
   if(archive) c.archived=true;
   callsMarkDirty(); renderCalls();
+}
+/* Модальное окно ввода результата при «Дозвонился». Результат сохраняется в c.result
+   (отдельное поле карточки), карточка архивируется. */
+function openCallResultModal(c){
+  if(!c) return;
+  const old = document.getElementById('callResultModal');
+  if(old) old.remove();
+
+  const overlay = document.createElement('div'); overlay.className='modal-overlay';
+  overlay.id='callResultModal';
+  const box = document.createElement('div'); box.className='modal-box';
+  const title = document.createElement('h3'); title.textContent='Дозвонились — результат звонка';
+  box.appendChild(title);
+  const hint = document.createElement('div'); hint.className='modal-hint';
+  hint.textContent='Введите результат (увидят на карточке). Карточка уйдёт в архив.';
+  box.appendChild(hint);
+  const ta = document.createElement('textarea'); ta.placeholder='например: договорились на 15:00, записали на курс…';
+  ta.value = c.result || '';
+  ta.autofocus = true;
+  box.appendChild(ta);
+  const acts = document.createElement('div'); acts.className='modal-actions';
+  const ok = document.createElement('button'); ok.type='button'; ok.className='btn-small primary'; ok.textContent='✓ Сохранить';
+  ok.onclick = ()=>{
+    c.result = ta.value.trim();
+    c.history.push({ts:Date.now(), result:'Дозвонился'+(ta.value.trim()?(' — '+ta.value.trim()):'')});
+    c.archived = true;
+    callsMarkDirty(); renderCalls();
+    overlay.remove();
+  };
+  const cn = document.createElement('button'); cn.type='button'; cn.className='btn-small'; cn.textContent='Отмена';
+  cn.onclick = ()=>{ overlay.remove(); };
+  acts.appendChild(ok); acts.appendChild(cn);
+  box.appendChild(acts);
+  overlay.appendChild(box);
+  // закрытие по Esc
+  overlay.addEventListener('keydown', e=>{ if(e.key==='Escape') overlay.remove(); });
+  document.body.appendChild(overlay);
+  setTimeout(()=>ta.focus(), 50);
 }
 function callOpenResult(id){
   const c = CALLS.items.find(x=>x.id===id); if(!c) return;
@@ -7876,6 +7945,5 @@ autosizeAll(document);
 
 
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f"}' crossorigin="anonymous"></script>
-<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f"}' crossorigin="anonymous"></script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a288b1917ea0e92d',t:'MTc4NjI5ODc3NQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a296f7148e0bf132',t:'MTc4NjQ0ODQyMw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
