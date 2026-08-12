@@ -641,7 +641,7 @@
 
   <div class="topbar">
     <span class="title">📞 Менеджер речевых модулей</span>
-    <span class="badge" style="font-size:11px;opacity:.7">v0.60</span>
+    <span class="badge" style="font-size:11px;opacity:.7">v0.62</span>
     <label class="bool-toggle" id="autosaveWrap" style="display:none;margin-right:8px;font-size:12px">
       <input type="checkbox" id="autosaveChk" checked> автосохранение
     </label>
@@ -3073,7 +3073,7 @@ function calcNextSlot(c, offsetHours){
 }
 /* Автосдвиг при НО/АО/Сброс: +3 часа (с учётом лимитов). */
 function autoReschedule(c, resultLabel){
-  const slot = calcNextSlot(c, 3);
+  const slot = calcNextSlot(c, 2.5);
   const entry = {
     ts: Date.now(),
     result: resultLabel,
@@ -3226,12 +3226,14 @@ function buildCallCard(c){
     const cmt=document.createElement('div'); cmt.className='comment'; cmt.textContent=comment;
     info.appendChild(cmt);
   }
-  // результат звонка — отдельное поле (видно сразу, если заполнен)
+  // результат звонка — отдельное поле (видно сразу; клик = редактировать)
   const callResult=(c.result||'').trim();
   if(callResult){
     const res=document.createElement('div'); res.className='call-result-field';
-    res.textContent='📋 '+callResult;
-    res.title='Результат звонка';
+    res.textContent='📋 '+callResult+' ✎';
+    res.title='Клик — изменить результат звонка';
+    res.style.cursor='pointer';
+    res.onclick=(e)=>{ e.stopPropagation(); openCallResultModal(c, true); };
     info.appendChild(res);
   }
   main.appendChild(info);
@@ -3273,9 +3275,7 @@ function buildCallCard(c){
 
   if(!c.archived){
     const res=document.createElement('div'); res.className='call-result';
-    res.appendChild(actBtn('НО','no','Нет ответа (перенос на +3ч, авт.)',()=>{ autoReschedule(c,'Не дозвонился'); c.archived=false; callsMarkDirty(); renderCalls(); }));
-    res.appendChild(actBtn('АО','ao','Автоответчик (перенос на +3ч, авт.)',()=>{ autoReschedule(c,'Автоответчик'); c.archived=false; callsMarkDirty(); renderCalls(); }));
-    res.appendChild(actBtn('Сброс','sb','Сброс/занято (перенос на +3ч, авт.)',()=>{ autoReschedule(c,'Сброс/занято'); c.archived=false; callsMarkDirty(); renderCalls(); }));
+    res.appendChild(actBtn('АО/НО','ao','Нет ответа / автоответчик / сброс (перенос на +2.5ч, авт.)',()=>{ autoReschedule(c,'АО/НО'); c.archived=false; callsMarkDirty(); renderCalls(); }));
     res.appendChild(actBtn('Перезв.','cb','Указать время перезвона',()=>{ const inline=card.querySelector('.reschedule-inline'); if(inline) inline.classList.toggle('open'); }));
     bottom.appendChild(res);
   }
@@ -3639,9 +3639,10 @@ function callMarkResult(id, result, archive){
   if(archive) c.archived=true;
   callsMarkDirty(); renderCalls();
 }
-/* Модальное окно ввода результата при «Дозвонился». Результат сохраняется в c.result
-   (отдельное поле карточки), карточка архивируется. */
-function openCallResultModal(c){
+/* Модальное окно ввода/редактирования результата звонка.
+   editing=false: при «Дозвонился» — сохраняет в c.result и архивирует карточку.
+   editing=true: только редактирует c.result (без архивации и без записи в историю). */
+function openCallResultModal(c, editing){
   if(!c) return;
   const old = document.getElementById('callResultModal');
   if(old) old.remove();
@@ -3649,10 +3650,12 @@ function openCallResultModal(c){
   const overlay = document.createElement('div'); overlay.className='modal-overlay';
   overlay.id='callResultModal';
   const box = document.createElement('div'); box.className='modal-box';
-  const title = document.createElement('h3'); title.textContent='Дозвонились — результат звонка';
+  const title = document.createElement('h3');
+  title.textContent = editing ? 'Редактировать результат звонка' : 'Дозвонились — результат звонка';
   box.appendChild(title);
   const hint = document.createElement('div'); hint.className='modal-hint';
-  hint.textContent='Введите результат (увидят на карточке). Карточка уйдёт в архив.';
+  hint.textContent = editing ? 'Изменение сохранится в поле «Результат» на карточке.'
+                              : 'Введите результат (увидят на карточке). Карточка уйдёт в архив.';
   box.appendChild(hint);
   const ta = document.createElement('textarea'); ta.placeholder='например: договорились на 15:00, записали на курс…';
   ta.value = c.result || '';
@@ -3662,8 +3665,10 @@ function openCallResultModal(c){
   const ok = document.createElement('button'); ok.type='button'; ok.className='btn-small primary'; ok.textContent='✓ Сохранить';
   ok.onclick = ()=>{
     c.result = ta.value.trim();
-    c.history.push({ts:Date.now(), result:'Дозвонился'+(ta.value.trim()?(' — '+ta.value.trim()):'')});
-    c.archived = true;
+    if(!editing){
+      c.history.push({ts:Date.now(), result:'Дозвонился'+(ta.value.trim()?(' — '+ta.value.trim()):'')});
+      c.archived = true;
+    }
     callsMarkDirty(); renderCalls();
     overlay.remove();
   };
@@ -7945,5 +7950,5 @@ autosizeAll(document);
 
 
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f"}' crossorigin="anonymous"></script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a296f7148e0bf132',t:'MTc4NjQ0ODQyMw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</body>
 </html>
