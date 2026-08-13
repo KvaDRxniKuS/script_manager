@@ -307,6 +307,47 @@
   .cf-links .link-row input.link-url{flex:1}
   .cf-links .link-row button{flex:0 0 auto}
   .call-form .form-actions{display:flex;gap:8px;margin-top:4px;flex-wrap:wrap}
+  /* === Форма перезвона в виде карточки === */
+  .call-form{box-shadow:0 2px 8px rgba(0,0,0,.25)}
+  .call-form .cf-title{font-size:12px;color:var(--muted);margin-bottom:6px}
+  .call-form input.cf-inp, .call-form select.cf-inp, .call-form textarea.cf-inp{
+    background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.12);color:var(--text);
+    border-radius:6px;padding:6px 8px;font:inherit;outline:none;min-width:0}
+  .call-form input.cf-inp:focus,.call-form select.cf-inp:focus,.call-form textarea.cf-inp:focus{border-color:var(--accent)}
+  .call-form .cf-lbl{font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:2px}
+  .call-form .cf-big{font-size:18px;font-weight:700;color:#fff;font-variant-numeric:tabular-nums}
+  .call-form .cf-big select.cf-inp{font-size:18px;font-weight:700;background:transparent;border:1px dashed rgba(255,255,255,.25);color:#fff;padding:2px 4px}
+  .call-form .cf-big select.cf-inp:focus{border-color:var(--accent);background:#0c0f15}
+  /* Ссылки как список (там, где в карточке история) */
+  .call-form .cf-linklist{border-top:1px dashed var(--line);margin-top:8px;padding-top:6px}
+  .call-form .cf-linklist .link-row{display:flex;gap:6px;align-items:center;margin-bottom:5px}
+  .call-form .cf-linklist .link-row input{flex:0 0 140px;font-size:12px;padding:5px 7px;background:rgba(0,0,0,.25);
+    border:1px solid rgba(255,255,255,.12);color:var(--text);border-radius:4px}
+  .call-form .cf-linklist .link-row input.link-url{flex:1}
+  .call-form .cf-linklist .link-row button{flex:0 0 auto}
+  /* === График оператора (календарь) === */
+  .sched-mode{display:inline-flex;align-items:center;justify-content:center;gap:6px;font-size:13px;cursor:pointer;
+    border:1px solid var(--line);border-radius:6px;padding:7px 14px;background:var(--panel2);color:var(--text);
+    transition:background .15s,border-color .15s,color .15s}
+  .sched-mode:hover{border-color:var(--accent)}
+  .sched-mode:has(input:checked){background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+  .sched-mode input{display:none}
+  .sched-dow-chip{display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;padding:4px 9px;
+    border:1px solid var(--line);border-radius:6px;background:var(--panel2)}
+  .sched-dow-chip:has(input:checked){border-color:var(--bad);color:#ff9e9b}
+  .sched-dow-chip input{margin:0}
+  .sched-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-top:6px}
+  .sched-dow{font-size:10px;color:var(--muted);text-align:center;text-transform:uppercase;padding:2px 0}
+  .sched-day{border:1px solid var(--line);border-radius:6px;padding:5px 2px;text-align:center;cursor:pointer;
+    background:rgba(150,160,180,.08);font-size:12px;user-select:none;transition:background .12s, border-color .12s;position:relative}
+  .sched-day:hover{filter:brightness(1.15)}
+  .sched-day .n{font-weight:600}
+  .sched-day.work{background:rgba(46,204,113,.18);border-color:rgba(46,204,113,.5);color:#8af0b8}
+  .sched-day.off{background:rgba(231,76,60,.12);border-color:rgba(231,76,60,.32);color:#ff9e9b}
+  .sched-day.today{outline:2px solid var(--accent);outline-offset:-1px}
+  .sched-day.manual{outline:1px dashed var(--warn);outline-offset:1px}
+  .sched-day.manual.work{box-shadow:inset 0 0 0 1px rgba(255,200,100,.4)}
+  .sched-day.manual.off{box-shadow:inset 0 0 0 1px rgba(255,100,100,.4)}
   .btn-small{padding:5px 10px;font-size:12px;border-radius:4px;border:1px solid var(--line);background:#1a2030;color:#cfe0ff;cursor:pointer}
   /* Модальное окно ввода результата звонка */
   .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:100000}
@@ -666,6 +707,9 @@
   /* Крупные чекбоксы для удобного попадания (везде кроме шапки) */
   input[type=checkbox]{width:20px;height:20px;accent-color:var(--accent);cursor:pointer}
   .topbar input[type=checkbox]{width:14px;height:14px}
+  /* Белая иконка календаря в полях даты */
+  input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1);opacity:.8;cursor:pointer}
+  input[type=date]::-webkit-calendar-picker-indicator:hover{opacity:1}
   /* Чекбокс-плашка в map: вся плашка кликабельна */
   .map-block .bool-cell input[type=checkbox]{width:22px;height:22px}
 </style>
@@ -675,7 +719,7 @@
 
   <div class="topbar">
     <span class="title">📞 Менеджер речевых модулей</span>
-    <button class="badge version-btn" id="versionBadge" style="font-size:11px;opacity:.8" title="Что нового?">v0.68</button>
+    <button class="badge version-btn" id="versionBadge" style="font-size:11px;opacity:.8" title="Что нового?">v0.72</button>
     <button class="secondary small-btn" id="changelogBtn" style="padding:3px 10px;font-size:11px">📋 Что нового</button>
     <label class="bool-toggle" id="autosaveWrap" style="display:none;margin-right:8px;font-size:12px">
       <input type="checkbox" id="autosaveChk" checked> автосохранение
@@ -746,12 +790,13 @@
       <span class="calls-stats" id="callsStats"></span>
       <span class="spacer"></span>
       <button class="secondary" id="callsNewBtn">➕ Новый перезвон</button>
+      <button class="secondary" id="callsScheduleBtn" title="График оператора: рабочие/выходные дни, ручные правки"><svg class="ic-cal" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>График</button>
       <button class="secondary" id="callsFileBtn">📂 Файл перезвонов</button>
     </div>
     <div class="calls-filters" id="callsFilters">
-      <button class="chip active" data-filter="active">📅 Актуальные</button>
+      <button class="chip active" data-filter="active"><svg class="ic-cal" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Актуальные</button>
       <button class="chip" data-filter="today">▸ Сегодня</button>
-      <button class="chip" data-filter="upcoming">🗓 В будущем</button>
+      <button class="chip" data-filter="upcoming"><svg class="ic-cal" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>В будущем</button>
       <button class="chip" data-filter="overdue">⏰ Просроченные</button>
       <button class="chip" data-filter="all">▦ Все</button>
       <button class="chip" data-filter="archived">✓ Архив</button>
@@ -2651,6 +2696,7 @@ function ensureCallsShape(){
   if(!Array.isArray(CALLS.results)) CALLS.results = CALLS.results || [];
   if(!Array.isArray(CALLS.items)) CALLS.items = [];
   CALLS.items = CALLS.items.filter(x => x && typeof x==='object');
+  ensureSchedule();
   CALLS.items.forEach(c=>{
     if(!c.id) c.id = 'c_'+Date.now()+'_'+Math.random().toString(36).slice(2,7);
     if(!Array.isArray(c.history)) c.history = [];
@@ -3039,9 +3085,79 @@ function lastCallMinutes(c, now){
   }
   return now.getHours()*60 + now.getMinutes();
 }
+/* ============================================================
+   ГРАФИК ОПЕРАТОРА (рабочие дни)
+   Хранится в CALLS.schedule (сохраняется с callbacks.json):
+   {
+     enabled: bool,          // учитывать ли рабочие дни при автопереносе
+     mode: '5/2' | '2/2',    // режим
+     daysOff: ['6','0'],     // для 5/2 — выходные дни недели (JS getDay: 0=вс..6=сб)
+     anchor: 'YYYY-MM-DD',   // для 2/2 — стартовый рабочий день цикла
+     manual: { 'YYYY-MM-DD': true|false }  // ручные правки (клик по дню)
+   }
+============================================================ */
+function defaultSchedule(){
+  return {
+    enabled:false,          // учитывать ли график при автопереносе
+    kind:'week',            // 'week' | 'ratio'  — типаж графика
+    weekOff:['6','0'],      // для 'week': выходные дни недели (JS getDay: 0=вс..6=сб)
+    ratio:{ work:2, off:2 },// для 'ratio': соотношение рабочих/выходных (напр. 1/1, 2/2, 3/5)
+    anchor:'',              // для 'ratio': стартовый рабочий день цикла (YYYY-MM-DD)
+    manual:{}               // { 'YYYY-MM-DD': 1|0 } — ручные правки (1=рабочий, 0=выходной)
+  };
+}
+function ensureSchedule(){
+  if(!CALLS || typeof CALLS !== 'object') CALLS = emptyCalls();
+  if(!CALLS.schedule) CALLS.schedule = defaultSchedule();
+  const s = CALLS.schedule;
+  // Миграция старого формата (mode '5/2'/'2/2') → новый (kind 'week'/'ratio')
+  if(s.mode){
+    if(s.mode==='2/2'){
+      s.kind='ratio'; s.ratio={work:2,off:2};
+    } else {
+      s.kind='week'; s.weekOff = Array.isArray(s.daysOff) ? s.daysOff.slice() : ['6','0'];
+    }
+    delete s.mode; delete s.daysOff;
+  }
+  if(!Array.isArray(s.weekOff)) s.weekOff = ['6','0'];
+  if(s.kind!=='week' && s.kind!=='ratio') s.kind = 'week';
+  if(!s.ratio || typeof s.ratio!=='object') s.ratio = { work:2, off:2 };
+  if(!s.manual || typeof s.manual!=='object') s.manual = {};
+  return s;
+}
+/* Автоматический паттерн для дня (без учёта ручных правок). */
+function patternWorkingDay(dateStr, sched){
+  const s = sched || (CALLS && CALLS.schedule) || null;
+  if(!s) return true;
+  const d = parseDate(dateStr);
+  if(!d) return true;
+  if(s.kind==='ratio'){
+    const w = Math.max(1, parseInt(s.ratio.work,10)||1);
+    const o = Math.max(1, parseInt(s.ratio.off,10)||1);
+    // если якорь не задан — считаем цикл от сегодня (чтобы чередование было видно сразу)
+    if(!s.anchor){ s.anchor = todayDateStr(); }
+    const a = parseDate(s.anchor);
+    if(!a) return true;
+    const days = Math.round((d - a)/86400000);
+    const r = ((days % (w+o)) + (w+o)) % (w+o);
+    return r < w;   // первые w дней цикла — рабочие
+  }
+  // week: выходные — фиксированные дни недели
+  return !(Array.isArray(s.weekOff) ? s.weekOff : ['6','0']).includes(String(d.getDay()));
+}
+/* Рабочий ли день для автопереноса. dateStr: 'YYYY-MM-DD'.
+   manual[dateStr] (абсолютное: 1=рабочий, 0=выходной) переопределяет паттерн.
+   Если график выключен — все дни рабочие. */
+function isWorkingDay(dateStr, sched){
+  const s = sched || (CALLS && CALLS.schedule) || null;
+  if(!s) return true;
+  if(s.manual && Object.prototype.hasOwnProperty.call(s.manual, dateStr)) return s.manual[dateStr]===1;
+  if(!s.enabled) return true;
+  return patternWorkingDay(dateStr, s);
+}
 /* Рассчитать фактическое время следующего перезвона при НО/АО/Сброс:
    - сдвиг +offsetHours (по умолчанию 3ч) ОТ времени последнего звонка (из истории),
-     округление вниз до 00/30: звонок в 16:31 → 19:30;
+     округление вверх до 00/30, чтобы перенос был НЕ МЕНЬШЕ offset;
    - если истории нет — от текущего момента;
    - окно С-ДО (timeFrom/timeTo) — информационное, используется как РАМКИ отображения:
      если кандидат выходит за рамки окна или за текущий день — переносим на следующий
@@ -3060,8 +3176,10 @@ function calcNextSlot(c, offsetHours){
   const nowM = mskNow.getHours()*60 + mskNow.getMinutes();
   // база = время последнего звонка из истории (или сейчас)
   const baseM = lastCallMinutes(c, mskNow);
-  // кандидат = база + offset, округление к БЛИЖАЙШЕМУ 00/30
-  const candM = Math.round((baseM + offsetHours*60) / 30) * 30;
+  // кандидат = база + offset, округление ВВЕРХ до 00/30.
+  // ceil (а не round) гарантирует, что перенос НИКОГДА не будет меньше offset
+  // (т.е. при offset=2.5 — не меньше 2.5ч и не больше 3ч).
+  const candM = Math.ceil((baseM + offsetHours*60) / 30) * 30;
 
   // допустимо ли время (не после 21 / не раньше 8 по местному клиента)
   const okTime = m=>{
@@ -3086,22 +3204,32 @@ function calcNextSlot(c, offsetHours){
 
   const todayStr = fmtDate(mskNow);
   // попытка в текущий день: кандидат сегодня, в БУДУЩЕМ относительно текущего времени,
-  // в окне и допустим.
-  if(countMskDay(todayStr) < maxPerDay && candM < 24*60 && candM > nowM && inWindow(candM) && okTime(candM)){
+  // в окне, допустим И сегодня — рабочий день.
+  if(countMskDay(todayStr) < maxPerDay && candM < 24*60 && candM > nowM && inWindow(candM) && okTime(candM) && isWorkingDay(todayStr)){
     return { date: todayStr, time: pad(Math.floor(candM/60))+':'+pad(candM%60) };
   }
 
-  // иначе — следующие дни на время «с» карточки (или кандидата, если «с» нет)
+  // иначе — следующие дни на время «с» карточки (или кандидата, если «с» нет),
+  // пропуская выходные дни оператора (если график включён).
   for(let dayOffset=1; dayOffset<60; dayOffset++){
     const base = new Date(mskNow.getFullYear(), mskNow.getMonth(), mskNow.getDate()+dayOffset);
     const dateStr = fmtDate(base);
     if(countMskDay(dateStr) >= maxPerDay) continue;
+    if(!isWorkingDay(dateStr)) continue;   // выходной — пропускаем
     let m = (fromM!==null) ? fromM : candM;
     if(m >= 24*60) m = (fromM!==null) ? fromM : 8*60;
     if(!inWindow(m) || !okTime(m)) continue;
     return { date: dateStr, time: pad(Math.floor(m/60))+':'+pad(m%60) };
   }
-  // фоллбэк
+  // фоллбэк: ближайший рабочий день
+  for(let dayOffset=1; dayOffset<60; dayOffset++){
+    const base = new Date(mskNow.getFullYear(), mskNow.getMonth(), mskNow.getDate()+dayOffset);
+    const dateStr = fmtDate(base);
+    if(!isWorkingDay(dateStr)) continue;
+    const fm = (fromM!==null) ? fromM : 8*60;
+    return { date: dateStr, time: pad(Math.floor(fm/60))+':'+pad(fm%60) };
+  }
+  // крайний фоллбэк — завтра
   const d = new Date(mskNow.getFullYear(), mskNow.getMonth(), mskNow.getDate()+1);
   const fm = (fromM!==null) ? fromM : 8*60;
   return { date: fmtDate(d), time: pad(Math.floor(fm/60))+':'+pad(fm%60) };
@@ -3511,41 +3639,7 @@ function normalizeCallLinks(c){
 function buildCallForm(c){
   const isEdit = !!c;
   const wrap = document.createElement('div');
-  wrap.className = 'call-form' + (isEdit?(' call-form-edit-'+c.id):'');
-  const h = document.createElement('h3');
-  h.className='cf-head';
-  h.textContent = isEdit?'✎ Редактировать перезвон':'➕ Новый перезвон';
-  wrap.appendChild(h);
-
-  const body = document.createElement('div'); body.className='cf-body';
-  const mkBlock = (title)=>{
-    const b=document.createElement('div'); b.className='cf-block';
-    const t=document.createElement('div'); t.className='cf-title'; t.textContent=title;
-    b.appendChild(t);
-    return b;
-  };
-
-  // --- Блок: время и дата ---
-  const bWhen = mkBlock('Время и дата');
-  const grid1 = document.createElement('div'); grid1.className='cf-grid';
-  const fDate = mkField('Дата','date', c?.date||todayDateStr());
-  const fFrom = mkTimeSelect('Время с', c?.timeFrom||'');
-  const fTo   = mkTimeSelect('Время до', c?.timeTo||'');
-  const fTz = mkSelect('Часовой пояс клиента',
-    CALL_TIMEZONES.map(z=>z.label),
-    (CALL_TIMEZONES.find(z=>z.utc===(c?.tz||DEFAULT_TZ_UTC))||CALL_TIMEZONES[1]).label);
-  grid1.appendChild(fDate.labelWrap);
-  grid1.appendChild(fFrom.labelWrap);
-  grid1.appendChild(fTo.labelWrap);
-  grid1.appendChild(fTz.labelWrap);
-  const fIgnore = document.createElement('label'); fIgnore.className='cf-check';
-  const fIgnoreCb = document.createElement('input'); fIgnoreCb.type='checkbox'; fIgnoreCb.checked = !!c?.ignoreTz;
-  const fIgnoreLbl = document.createElement('span'); fIgnoreLbl.textContent='Любое время (без 8–22)';
-  fIgnoreLbl.title='Не проверять ограничение 8–22 по местному времени клиента';
-  fIgnore.appendChild(fIgnoreCb); fIgnore.appendChild(fIgnoreLbl);
-  grid1.appendChild(fIgnore);
-  bWhen.appendChild(grid1);
-  body.appendChild(bWhen);
+  wrap.className = 'call-card call-form ' + (isEdit?(' call-form-edit-'+c.id):'');
 
   // Автоподстановка родителя и телефона из реально заполненных переменных (для новой карточки)
   let autoParent='', autoPhone='';
@@ -3555,22 +3649,63 @@ function buildCallForm(c){
     autoPhone  = pull('phone')||pull('parent_phone')||pull('client_phone')||'';
   }
 
-  // --- Блок: кто ---
-  const bWho = mkBlock('Кто');
-  const grid3 = document.createElement('div'); grid3.className='cf-grid';
-  const fParent = mkField('Родитель','text', (c?.parent||autoParent)||'');
+  // === Строка 1: когда | имя+телефон/комментарий === (как в карточке)
+  const main = document.createElement('div'); main.className='call-main';
+
+  // === Блок 1: время и дата ===
+  const when = document.createElement('div'); when.className='tile-when';
+  const fDate = mkField('Дата','date', c?.date||todayDateStr());
+  const fFrom = mkTimeSelect('Время с', c?.timeFrom||'');
+  const fTo   = mkTimeSelect('Время до', c?.timeTo||'');
+  const fTz = mkSelect('Часовой пояс клиента',
+    CALL_TIMEZONES.map(z=>z.label),
+    (CALL_TIMEZONES.find(z=>z.utc===(c?.tz||DEFAULT_TZ_UTC))||CALL_TIMEZONES[1]).label);
+  // время окна С–ДО (крупно, как big-time в карточке)
+  const twMain = document.createElement('div'); twMain.className='tw-main'; twMain.style.cssText='flex-wrap:wrap;gap:4px';
+  const sLbl=document.createElement('span'); sLbl.textContent='С '; sLbl.style.cssText='font-size:18px;font-weight:700;color:#fff';
+  fFrom.select.className='cf-inp'; fFrom.select.style.cssText='font-size:18px;font-weight:700;background:transparent;border:1px dashed rgba(255,255,255,.25);color:#fff;border-radius:6px;padding:2px 4px;width:auto';
+  twMain.appendChild(sLbl); twMain.appendChild(fFrom.select);
+  const toLbl=document.createElement('span'); toLbl.textContent=' ДО '; toLbl.style.cssText='font-size:18px;font-weight:700;color:#fff';
+  fTo.select.className='cf-inp'; fTo.select.style.cssText='font-size:18px;font-weight:700;background:transparent;border:1px dashed rgba(255,255,255,.25);color:#fff;border-radius:6px;padding:2px 4px;width:auto';
+  twMain.appendChild(toLbl); twMain.appendChild(fTo.select);
+  when.appendChild(twMain);
+  // строка: дата | часовой пояс | галка «любое время» — компактно в одну строку
+  const twSub = document.createElement('div'); twSub.className='tw-sub';
+  const mkSubField = (label, ctrl)=>{
+    const w=document.createElement('label'); w.style.cssText='display:flex;align-items:center;gap:4px;font-size:11px;color:var(--muted)';
+    const k=document.createElement('span'); k.textContent=label;
+    w.appendChild(k); w.appendChild(ctrl);
+    return w;
+  };
+  fDate.input.className='cf-inp'; fDate.input.style.cssText='font-size:14px;padding:3px 6px;width:auto';
+  twSub.appendChild(mkSubField('Дата', fDate.input));
+  fTz.select.className='cf-inp'; fTz.select.style.cssText='font-size:13px;padding:3px 6px;width:auto';
+  twSub.appendChild(mkSubField('Пояс', fTz.select));
+  const fIgnore = document.createElement('label'); fIgnore.className='cf-check';
+  fIgnore.style.padding='0'; fIgnore.style.paddingBottom='2px';
+  const fIgnoreCb = document.createElement('input'); fIgnoreCb.type='checkbox'; fIgnoreCb.checked = !!c?.ignoreTz;
+  const fIgnoreLbl = document.createElement('span'); fIgnoreLbl.textContent='00:00–23:59';
+  fIgnoreLbl.title='Игнорировать время клиента, допуская звонки раньше 8 и позже 22';
+  fIgnore.appendChild(fIgnoreCb); fIgnore.appendChild(fIgnoreLbl);
+  twSub.appendChild(fIgnore);
+  when.appendChild(twSub);
+  main.appendChild(when);
+
+  // === Блок 2: имя + телефон + комментарий ===
+  const info = document.createElement('div'); info.className='tile-info';
+  const infoTop = document.createElement('div'); infoTop.className='ti-top';
+  const fParent = mkField('Имя','text', (c?.parent||autoParent)||'', 'имя');
+  fParent.input.className='cf-inp'; fParent.input.style.cssText='font-size:17px;font-weight:700;color:#fff;flex:1;min-width:120px';
+  infoTop.appendChild(fParent.input);
   const fPhone = mkField('Телефон','text', (c?.phone||autoPhone)||'', '7...');
+  fPhone.input.className='cf-inp'; fPhone.input.style.cssText='font-size:16px;font-weight:700;color:#cfe0ff;flex:0 0 150px';
   // запрет на ввод «+» и лишних символов в номере телефона
   fPhone.input.addEventListener('input', ()=>{
     fPhone.input.value = fPhone.input.value.replace(/[^0-9]/g,'');
   });
-  grid3.appendChild(fParent.labelWrap);
-  grid3.appendChild(fPhone.labelWrap);
-  bWho.appendChild(grid3);
-  body.appendChild(bWho);
-
-  // --- Блок: комментарий ---
-  const bNotes = mkBlock('Комментарий');
+  infoTop.appendChild(fPhone.input);
+  info.appendChild(infoTop);
+  // комментарий
   let defaultNotes = c?.notes || '';
   if(!isEdit && !defaultNotes){
     const pull = varReal;
@@ -3583,21 +3718,23 @@ function buildCallForm(c){
     defaultNotes = parts.join(' · ');
   }
   const notes = document.createElement('textarea');
-  notes.value = defaultNotes;
+  notes.className='cf-inp'; notes.value=defaultNotes;
   notes.placeholder='ученик, класс, причина, детали договорённости...';
-  bNotes.appendChild(notes);
-  body.appendChild(bNotes);
+  notes.style.cssText='min-height:44px;resize:vertical;width:100%';
+  info.appendChild(notes);
+  main.appendChild(info);
+  wrap.appendChild(main);
 
-  // --- Блок: ссылки ---
-  const bLinks = mkBlock('Ссылки');
-  const linksList=document.createElement('div'); linksList.className='cf-links';
+  // === Ссылки списком (там, где в карточке история) ===
+  const linkBlock = document.createElement('div'); linkBlock.className='cf-linklist';
+  const lh=document.createElement('div'); lh.className='cf-lbl'; lh.textContent='Ссылки'; linkBlock.appendChild(lh);
+  const linksList=document.createElement('div');
   const existingLinks=normalizeCallLinks(c);
   function renderLinks(){
     linksList.innerHTML='';
     existingLinks.forEach((l,idx)=>{
       const row=document.createElement('div'); row.className='link-row';
       const isCall = l.label==='Звонок';
-      // Имя ссылки — редактируемое (кроме «Звонок»). Можно задать «для одного ребёнка», «для другого» и т.п.
       const lab = document.createElement('input');
       lab.type='text';
       lab.placeholder = isCall ? 'Звонок' : 'имя (напр. админка ребёнка)';
@@ -3606,7 +3743,7 @@ function buildCallForm(c){
       lab.oninput=()=>{ if(!isCall) l.label=lab.value.trim()||'Админка'; };
       const u=document.createElement('input');
       u.className='link-url';
-      u.placeholder = isCall ? 'https://... (ссылка на CRM для результатов звонка)' : 'https://...';
+      u.placeholder = isCall ? 'https://... (CRM)' : 'https://...';
       u.value=l.url||'';
       u.oninput=()=>{l.url=u.value.trim();};
       const del=document.createElement('button');
@@ -3619,18 +3756,14 @@ function buildCallForm(c){
     const add=document.createElement('button');
     add.type='button';add.className='btn-small';add.textContent='+ админка';
     add.title='Добавить ссылку на админку (можно задать своё имя)';
-    add.onclick=()=>{
-      existingLinks.push({label:'', url:''});
-      renderLinks();
-    };
+    add.onclick=()=>{ existingLinks.push({label:'', url:''}); renderLinks(); };
     linksList.appendChild(add);
   }
   renderLinks();
-  bLinks.appendChild(linksList);
-  body.appendChild(bLinks);
+  linkBlock.appendChild(linksList);
+  wrap.appendChild(linkBlock);
 
-  wrap.appendChild(body);
-
+  // === Действия ===
   const acts=document.createElement('div');acts.className='form-actions';
   const save=document.createElement('button');
   save.type='button';save.className='btn-small primary';save.textContent=isEdit?'Сохранить':'Добавить';
@@ -3667,6 +3800,148 @@ function buildCallForm(c){
   acts.appendChild(save);acts.appendChild(cancel);
   wrap.appendChild(acts);
   return wrap;
+}
+
+/* === Модалка «График оператора» (рабочие дни) === */
+function buildSchedCalendarHTML(sch){
+  const now = new Date();
+  const day = now.getDay();
+  const diffToMon = (day===0) ? -6 : (1-day);   // понедельник текущей недели
+  const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate()+diffToMon);
+  const dows = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
+  const todayStr = fmtDate(now);
+  let html = '<div class="sched-grid">';
+  html += dows.map(d=>`<div class="sched-dow">${d}</div>`).join('');
+  for(let i=0;i<28;i++){
+    const d = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate()+i);
+    const ds = fmtDate(d);
+    // Показываем паттерн ВСЕГДА (независимо от enabled), чтобы сразу было видно график.
+    // Ручная правка (manual, абсолютное 1|0) перекрывает паттерн.
+    let work;
+    if(sch.manual && Object.prototype.hasOwnProperty.call(sch.manual, ds)) work = sch.manual[ds]===1;
+    else work = patternWorkingDay(ds, sch);
+    const manual = Object.prototype.hasOwnProperty.call(sch.manual, ds);
+    const isToday = ds===todayStr;
+    html += `<div class="sched-day ${work?'work':'off'} ${manual?'manual':''} ${isToday?'today':''}" data-date="${ds}"
+      title="${ds} — ${work?'рабочий':'выходной'}${manual?' (вручную)':''}${isToday?' · сегодня':''}">
+      <div class="n">${d.getDate()}</div></div>`;
+  }
+  html += '</div>';
+  return html;
+}
+function openScheduleModal(){
+  const sched = ensureSchedule();
+  const old = document.getElementById('schedModal'); if(old) old.remove();
+  const overlay = document.createElement('div'); overlay.className='modal-overlay'; overlay.id='schedModal';
+  const box = document.createElement('div'); box.className='modal-box'; box.style.width='min(680px,94vw)';
+  const head = document.createElement('h3'); head.style.cssText='display:flex;align-items:center;gap:8px';
+  head.innerHTML = '<svg class="ic-cal" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>График оператора (рабочие дни)';
+  box.appendChild(head);
+  const hint = document.createElement('div'); hint.className='modal-hint';
+  hint.textContent='Автоперенос (АО/НО) ставит звонок только на рабочие дни. Ручной перенос («Перезв.») — на любой день.';
+  box.appendChild(hint);
+
+  // Включить учёт
+  const enW = document.createElement('div'); enW.style.marginBottom='12px';
+  enW.innerHTML = `<label class="cf-check" style="margin:0"><input type="checkbox" id="schedEnabled" ${sched.enabled?'checked':''}> Учитывать рабочие дни при автопереносе</label>`;
+  box.appendChild(enW);
+
+  // Типаж графика — кнопки в общем стиле
+  const modeW = document.createElement('div'); modeW.style.marginBottom='12px';
+  modeW.innerHTML = `
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <label class="sched-mode"><input type="radio" name="schedKind" value="week" ${sched.kind!=='ratio'?'checked':''}> Неделя</label>
+      <label class="sched-mode"><input type="radio" name="schedKind" value="ratio" ${sched.kind==='ratio'?'checked':''}> 2/2</label>
+    </div>`;
+  box.appendChild(modeW);
+
+  const daysWeek = document.createElement('div'); daysWeek.id='schedDaysWeek'; daysWeek.style.marginBottom='12px';
+  box.appendChild(daysWeek);
+  const daysRatio = document.createElement('div'); daysRatio.id='schedDaysRatio'; daysRatio.style.marginBottom='12px';
+  box.appendChild(daysRatio);
+
+  const calTitle = document.createElement('div'); calTitle.style.fontSize='12px'; calTitle.style.color='var(--muted)';
+  calTitle.style.margin='4px 0 2px'; calTitle.textContent='Ближайшие 4 недели · зелёный = рабочий, красный = выходной · клик по дню — переопределить вручную (пунктир), повторный клик — вернуть к паттерну';
+  box.appendChild(calTitle);
+  const cal = document.createElement('div'); cal.id='schedCalendar'; box.appendChild(cal);
+
+  const resetBtn = document.createElement('button'); resetBtn.type='button'; resetBtn.className='btn-small';
+  resetBtn.textContent='↺ Сбросить ручные правки';
+  resetBtn.style.marginTop='8px';
+  box.appendChild(resetBtn);
+
+  const acts = document.createElement('div'); acts.className='modal-actions';
+  const save = document.createElement('button'); save.className='btn-small primary'; save.textContent='Сохранить';
+  const cancel = document.createElement('button'); cancel.className='btn-small'; cancel.textContent='Закрыть';
+  acts.appendChild(save); acts.appendChild(cancel);
+  box.appendChild(acts);
+
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+
+  overlay.onclick=(e)=>{ if(e.target===overlay) overlay.remove(); };
+  cancel.onclick=()=>overlay.remove();
+  save.onclick=()=>{ callsMarkDirty(); if(MODE==='calls') renderCalls(); overlay.remove(); };
+
+  function renderSchedModal(){
+    const sch = CALLS.schedule;
+    // Блок «Неделя»: выходные по дням недели
+    const wd = [['1','Пн'],['2','Вт'],['3','Ср'],['4','Чт'],['5','Пт'],['6','Сб'],['0','Вс']];
+    daysWeek.innerHTML = `<div style="font-size:12px;color:var(--muted);margin-bottom:6px">Выходные дни недели:</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">`+
+      wd.map(([v,l])=>`<label class="sched-dow-chip"><input type="checkbox" data-dow="${v}" ${(sch.weekOff||[]).includes(v)?'checked':''}> ${l}</label>`).join('')+
+      `</div>`;
+    daysWeek.style.display = sch.kind!=='ratio' ? '' : 'none';
+    daysWeek.querySelectorAll('input[data-dow]').forEach(cb=>{
+      cb.onchange=()=>{
+        const v=cb.dataset.dow;
+        if(cb.checked){ if(!sch.weekOff.includes(v)) sch.weekOff.push(v); }
+        else { sch.weekOff = sch.weekOff.filter(x=>x!==v); }
+        renderSchedModal();
+      };
+    });
+    // Блок «Соотношение»: N рабочих / M выходных + стартовый день
+    daysRatio.innerHTML = `
+      <div style="font-size:12px;color:var(--muted);margin-bottom:6px">Соотношение рабочих/выходных дней в цикле:</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <label style="font-size:12px;color:var(--text);display:flex;align-items:center;gap:6px">рабочих
+          <input type="number" id="schedRatioWork" min="1" max="30" value="${parseInt(sch.ratio.work,10)||2}" style="width:70px"></label>
+        <span style="color:var(--muted)">/</span>
+        <label style="font-size:12px;color:var(--text);display:flex;align-items:center;gap:6px">выходных
+          <input type="number" id="schedRatioOff" min="1" max="30" value="${parseInt(sch.ratio.off,10)||2}" style="width:70px"></label>
+        <label style="font-size:12px;color:var(--text);display:flex;align-items:center;gap:6px;margin-left:10px">стартовый рабочий день
+          <input type="date" id="schedAnchor" value="${sch.anchor||todayDateStr()}" style="width:auto"></label>
+      </div>`;
+    daysRatio.style.display = sch.kind==='ratio' ? '' : 'none';
+    const rw = daysRatio.querySelector('#schedRatioWork');
+    const ro = daysRatio.querySelector('#schedRatioOff');
+    const anch = daysRatio.querySelector('#schedAnchor');
+    if(rw) rw.onchange=()=>{ sch.ratio.work = Math.max(1, parseInt(rw.value,10)||1); renderSchedModal(); };
+    if(ro) ro.onchange=()=>{ sch.ratio.off = Math.max(1, parseInt(ro.value,10)||1); renderSchedModal(); };
+    if(anch) anch.onchange=()=>{ sch.anchor=anch.value; };
+    cal.innerHTML = buildSchedCalendarHTML(sch);
+    cal.querySelectorAll('.sched-day').forEach(el=>{
+      el.onclick=()=>{
+        const ds=el.dataset.date;
+        const hasManual = Object.prototype.hasOwnProperty.call(sch.manual, ds);
+        if(hasManual){
+          // повторный клик — сбрасываем ручную правку, возвращаем к паттерну
+          delete sch.manual[ds];
+        } else {
+          // первый клик — инвертируем относительно паттерна и ЗАПОМИНАЕМ абсолютное forced-значение
+          sch.manual[ds] = patternWorkingDay(ds, sch) ? 0 : 1;
+        }
+        renderSchedModal();
+      };
+    });
+  }
+  box.querySelectorAll('input[name=schedKind]').forEach(r=>{
+    r.onchange=()=>{ CALLS.schedule.kind=r.value; renderSchedModal(); };
+  });
+  document.getElementById('schedEnabled').onchange=(e)=>{ CALLS.schedule.enabled=e.target.checked; renderSchedModal(); };
+  resetBtn.onclick=()=>{ CALLS.schedule.manual={}; renderSchedModal(); };
+
+  renderSchedModal();
 }
 
 function copyText(text){
@@ -3742,8 +4017,12 @@ function callOpenReschedule(id){
 }
 
 /* ===== Чейнджлог (что нового) ===== */
-const APP_VERSION = 'v0.68';
+const APP_VERSION = 'v0.72';
 const APP_CHANGELOG = [
+  { v:'v0.72', text:'Форма перезвона (создание/редактирование) выглядит как карточка: время С/ДО, дата и часовой пояс — в плитке времени; имя, номер и комментарий — в плитке контакта; ссылки — списком внизу. Галка «любое время» → «00:00–23:59» с подсказкой. Кнопки типажа графика — в общем стиле; иконки календаря белые.' },
+  { v:'v0.71', text:'График оператора: типаж «Неделя» или «2/2» (любое соотношение N/M, напр. 1/1, 3/5). Исправлено чередование — в режиме «2/2» выходные сразу видны (цикл от сегодня). Ручная правка дня хранит абсолютный статус и сохраняется при смене паттерна; обозначается пунктирной обводкой.' },
+  { v:'v0.70', text:'Рабочие дни оператора: календарь на 4 недели (зелёный = рабочий, красный = выходной). Клик по дню переопределяет его вручную, повторный клик — возвращает к паттерну. Автоперенос (АО/НО) — только на рабочие дни; ручной перенос — на любой. Кнопка «🗓 График».' },
+  { v:'v0.69', text:'Автоперенос (АО/НО): время следующего звонка округляется ВВЕРХ до получаса — теперь оно всегда не меньше 2,5ч от звонка (диапазон 2,5–3ч). Раньше могло ужиматься меньше 2,5ч.' },
   { v:'v0.68', text:'Редактор карточки перезвона переделан в плиточный стиль: блоки «Время и дата», «Кто», «Комментарий» и «Ссылки» — скруглённые прямоугольники (единый стиль с карточками).' },
   { v:'v0.67', text:'Карточка перезвона: внизу три мини-блока — кнопки ✓/×/✎, кнопки «АО/НО»/«Перезв.» + записанный результат, и «Ссылки» (Звонок + админки, скруглённые прямоугольники, переносятся на новую строку). Блоки выровнены по левому краю.' },
   { v:'v0.66', text:'Перезвоны: новый визуал — два блока (время/счётчики и имя/номер/коммент); кнопки действий внизу; просрочка подсвечивается красным (без бейджа «звонить»).' },
@@ -7858,6 +8137,8 @@ document.getElementById('callsNewBtn').onclick = ()=>{
   const form = document.querySelector('#callsList .call-form');
   if(form) form.scrollIntoView({behavior:'smooth', block:'start'});
 };
+// Кнопка «График оператора»
+document.getElementById('callsScheduleBtn').onclick = openScheduleModal;
 // Кнопка «Файл перезвонов» (открыть/создать)
 document.getElementById('callsFileBtn').onclick = async ()=>{
   if(!hasFSA){ alert('В этом браузере не поддерживается File System Access API. Используйте Chrome/Edge.'); return; }
@@ -8048,5 +8329,5 @@ autosizeAll(document);
 
 
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f"}' crossorigin="anonymous"></script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a2a65991ebb3e4a6',t:'MTc4NjYwOTc0Mw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</body>
 </html>
