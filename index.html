@@ -192,62 +192,79 @@
     box-shadow:0 1px 4px rgba(0,0,0,.2);
     display:grid;grid-template-columns:1fr;gap:4px;font-size:13px;
   }
-  .call-card.due{border-left-color:#ff5252;background:#1d161a}
+  .call-card.overdue{border-color:#ff5252;border-left-color:#ff5252;background:#241417;box-shadow:0 0 0 1px rgba(255,82,82,.35), 0 2px 8px rgba(255,82,82,.18)}
   .call-card.today{border-left-color:#ffc107;background:#1c1b17}
   .call-card.upcoming{border-left-color:#4caf50;background:#161c17}
   .call-card.archived{opacity:.5;border-left-color:#5a6070;background:#14171d}
 
-  /* Строка 1: время+дата | имя/телефон/коммент | действия */
-  .call-main{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:18px;align-items:center}
-  .call-when{display:flex;flex-direction:column;align-items:flex-start;gap:0;line-height:1.1;white-space:nowrap;min-width:0}
-  .call-when .big{font-size:30px;font-weight:700;color:#fff;font-variant-numeric:tabular-nums;white-space:nowrap;display:inline-flex;align-items:baseline;gap:5px}
-  .call-when .big-shift{font-size:20px;font-weight:800;color:#ffd089;white-space:nowrap}
-  .call-when .big-local{font-size:14px;font-weight:700;color:#9fb0cd;white-space:nowrap}
-  .call-when .next-time{font-size:14px;font-weight:700;color:#7fd8a8;white-space:nowrap}
-  .call-when .sub-line{display:inline-flex;align-items:baseline;gap:7px;white-space:nowrap;margin-top:1px}
-  .call-when .created{font-size:11px;color:#6b7890;white-space:nowrap}
-  .call-when .date{font-size:15px;font-weight:500;color:#c8d3e8;white-space:nowrap;min-width:0;overflow:hidden;text-overflow:ellipsis}
-  .call-when .hist{display:inline-flex;gap:3px;align-items:center;font-size:13px;color:var(--muted);white-space:nowrap}
-  .call-when .hist .lbl{margin-right:2px}
-   .call-when .hist .dot{width:10px;height:10px;border-radius:50%;border:1px solid rgba(255,255,255,.18);display:inline-block}
-  .call-when .hist .dot.no{background:#ff5252}
-  .call-when .hist .dot.ao{background:#ffa726}
-  .call-when .hist .dot.done{background:#4caf50}
-  .call-when .hist .dot.sb{background:#ef5350}
-  .call-when .hist .dot.cb{background:#42a5f5}
-  .call-when .overdue-badge{background:rgba(255,82,82,.35);color:#ffb0b0;font-size:13px;padding:2px 10px;border-radius:8px;white-space:nowrap}
+  /* Строка 1: два блока-плитки: (1) время и счётчики, (2) имя/номер/комментарий, + действия */
+  .call-main{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;align-items:stretch}
 
-  .call-info{min-width:0;display:flex;flex-direction:column;gap:2px;overflow:hidden}
-  .call-info .info-top{display:flex;align-items:baseline;gap:14px;min-width:0}
-  .call-info .name{font-size:21px;font-weight:700;color:#fff;white-space:nowrap}
-  .call-info .reason-tag{font-size:13px;background:rgba(79,140,255,.2);color:#cfe0ff;padding:0 10px;border-radius:8px;white-space:nowrap;flex-shrink:0}
-  .call-info .phone{white-space:nowrap;flex-shrink:0}
-  .call-info .phone-num{font-size:19px;cursor:pointer;font-weight:700;color:#cfe0ff;font-variant-numeric:tabular-nums;padding:0 4px;border-radius:4px;transition:background .15s}
-  .call-info .phone-num:hover{background:rgba(79,140,255,.18)}
-  .call-info .phone-num.copied{background:rgba(46,204,113,.3);color:#a9f0c3}
+  /* === Блок 1: время и счётчики === */
+  .tile-when{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px 14px;
+    display:flex;flex-direction:column;justify-content:center;gap:6px;min-width:0;min-height:100%}
+  .tile-when .tw-main{display:flex;align-items:baseline;gap:6px;white-space:nowrap}
+   .tile-when .tw-main .big-time{font-size:27px;font-weight:700;color:#fff;font-variant-numeric:tabular-nums;white-space:nowrap}
+   .tile-when .tw-main .big-shift{font-size:16px;font-weight:700;color:#ffd089;white-space:nowrap}
+  /* подблок: следующий + локальное время */
+  .tile-when .tw-sub{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+   .tile-when .tw-sub .next-time{font-size:14px;font-weight:700;color:#7fd8a8}
+   .tile-when .tw-sub .big-local{font-size:13px;font-weight:600;color:#9fb0cd}
+  /* подблок: дата + создан */
+  .tile-when .tw-date{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+   .tile-when .tw-date .date{font-size:14px;font-weight:600;color:#c8d3e8}
+  .tile-when .tw-date .created{font-size:11px;color:#6b7890}
+  /* подблок: история */
+  .tile-when .tw-hist{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+   .tile-when .tw-hist .lbl{font-size:12px;color:var(--muted)}
+  .tile-when .tw-hist .dot{width:10px;height:10px;border-radius:50%;border:1px solid rgba(255,255,255,.18);display:inline-block}
+  .tile-when .tw-hist .dot.no{background:#ff5252}
+  .tile-when .tw-hist .dot.ao{background:#ffa726}
+  .tile-when .tw-hist .dot.done{background:#4caf50}
+  .tile-when .tw-hist .dot.sb{background:#ef5350}
+  .tile-when .tw-hist .dot.cb{background:#42a5f5}
+
+  /* === Блок 2: имя/номер/комментарий === */
+  .tile-info{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px 14px;
+    display:flex;flex-direction:column;gap:4px;min-width:0;min-height:100%}
+  .tile-info .ti-top{display:flex;align-items:baseline;gap:14px;min-width:0;flex-wrap:wrap}
+  .tile-info .name{font-size:19px;font-weight:700;color:#fff;white-space:nowrap}
+  .tile-info .reason-tag{font-size:12px;background:rgba(79,140,255,.2);color:#cfe0ff;padding:0 10px;border-radius:8px;white-space:nowrap;flex-shrink:0}
+  .tile-info .phone{white-space:nowrap;flex-shrink:0}
+  .tile-info .phone-num{font-size:17px;cursor:pointer;font-weight:700;color:#cfe0ff;font-variant-numeric:tabular-nums;padding:0 4px;border-radius:4px;transition:background .15s}
+  .tile-info .phone-num:hover{background:rgba(79,140,255,.18)}
+  .tile-info .phone-num.copied{background:rgba(46,204,113,.3);color:#a9f0c3}
+  .tile-info .comment{font-size:14px;color:#d8e2f2;white-space:normal;word-wrap:break-word;min-width:0}
+  .tile-info .call-result-field{font-size:13px;color:#a9f0c3;background:rgba(46,204,113,.12);border:1px dashed rgba(46,204,113,.4);border-radius:6px;padding:2px 8px;white-space:normal;word-wrap:break-word;min-width:0;align-self:flex-start;cursor:pointer}
+
   /* Выделение карточки, из которой последним скопирован номер */
   .call-card.copied-num{background:#16301f;border-color:#2ecc71;box-shadow:0 0 0 1px rgba(46,204,113,.5), 0 2px 8px rgba(46,204,113,.25)}
   .call-info .comment{font-size:15px;color:#d8e2f2;white-space:normal;word-wrap:break-word;min-width:0}
   .call-info .call-result-field{font-size:14px;color:#a9f0c3;background:rgba(46,204,113,.12);border:1px dashed rgba(46,204,113,.4);border-radius:6px;padding:3px 8px;white-space:normal;word-wrap:break-word;min-width:0}
 
-  .call-acts{display:flex;gap:6px;align-items:center}
-  .call-acts button{padding:5px 14px;font-size:14px;border-radius:6px}
-  .call-acts button.ok{background:#4caf50;border-color:#4caf50;color:#0c0f15}
-  .call-acts button.danger{border-color:rgba(231,76,60,.5);color:#ff8a80}
-
-  /* Строка 2: результат вызова + ссылки (Звонок/админки) */
-  .call-bottom{display:flex;gap:14px;align-items:center;flex-wrap:wrap;border-top:1px dashed rgba(95,160,255,.25);padding-top:8px;margin-top:6px}
-  .call-result{display:flex;gap:7px;flex-wrap:wrap}
-  .call-result button{padding:4px 15px;font-size:14px;border-radius:6px}
-  .call-result button.cb{background:#5fa0ff;border-color:#5fa0ff;color:#fff;font-weight:600}
-  .call-result button.no{background:#ff525233;border-color:#ff525266;color:#ffb0b0}
-  .call-result button.ao{background:#ffa72633;border-color:#ffa72666;color:#ffcc80}
-  .call-result button.sb{background:#ef535022;border-color:#ef535055;color:#ff9e9b}
-  .call-links{display:flex;gap:9px;flex-wrap:wrap;margin-left:auto}
-  .call-links .link-btn{display:inline-flex;align-items:center;text-decoration:none;color:#fff;background:#3a6fd6;font-size:14px;font-weight:600;padding:3px 15px;border-radius:15px;cursor:pointer;white-space:nowrap;transition:filter .1s}
-  .call-links .link-btn.zvonok{background:#2ecc71}
-  .call-links .link-btn:hover{filter:brightness(1.12)}
-  .call-links .link-btn.disabled{opacity:.5;cursor:default;filter:none}
+  /* Строка 2: три мини-блока — управление карточкой / результат звонка / ссылки */
+  .call-bottom{display:flex;gap:10px;align-items:stretch;flex-wrap:wrap;margin-top:8px}
+  .cb-block{background:var(--panel2);border:1px solid var(--line);border-radius:10px;
+    padding:7px 10px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;min-height:42px}
+  .cb-block button{padding:5px 13px;font-size:13px;border-radius:6px}
+  .cb-block button.ok{background:#4caf50;border-color:#4caf50;color:#0c0f15}
+  .cb-block button.danger{border-color:rgba(231,76,60,.5);color:#ff8a80}
+  .cb-result button.cb{background:#5fa0ff;border-color:#5fa0ff;color:#fff;font-weight:600}
+  .cb-result button.no{background:#ff525233;border-color:#ff525266;color:#ffb0b0}
+  .cb-result button.ao{background:#ffa72633;border-color:#ffa72666;color:#ffcc80}
+  .cb-result button.sb{background:#ef535022;border-color:#ef535055;color:#ff9e9b}
+  /* Поле записанного результата — внутри блока «Результат звонка» */
+  .cb-result .call-result-field{font-size:13px;color:#a9f0c3;background:rgba(46,204,113,.12);
+    border:1px dashed rgba(46,204,113,.4);border-radius:6px;padding:4px 9px;white-space:normal;
+    word-wrap:break-word;min-width:0;cursor:pointer}
+  .cb-result .call-result-field:hover{background:rgba(46,204,113,.25)}
+  /* Блок ссылок (Звонок + админки) — скруглённые прямоугольники */
+  .cb-links{display:flex;gap:8px;flex-wrap:wrap}
+  .cb-links .link-btn{display:inline-flex;align-items:center;text-decoration:none;color:#fff;background:#3a6fd6;
+    font-size:13px;font-weight:600;padding:5px 14px;border-radius:8px;cursor:pointer;white-space:nowrap;transition:filter .1s}
+  .cb-links .link-btn.zvonok{background:#2ecc71}
+  .cb-links .link-btn:hover{filter:brightness(1.12)}
+  .cb-links .link-btn.disabled{opacity:.5;cursor:default;filter:none}
 
   /* Детали (раскрываются кликом по карточке) — только история */
   .call-detail{margin-top:3px;border-top:1px dashed var(--line);padding-top:5px;font-size:12px;color:#c8d2e4;display:none}
@@ -266,20 +283,30 @@
   .reschedule-inline .rl-label{display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--muted);white-space:nowrap}
   .reschedule-inline textarea{flex:1 1 auto;min-width:180px;min-height:24px;font-family:inherit}
   .reschedule-inline button{padding:3px 9px;font-size:12px;border-radius:4px}
-  .call-form{background:#13161d;border:1px dashed var(--line);border-radius:8px;padding:14px 16px;margin:8px 0 14px}
-  .call-form h3{margin:0 0 10px;font-size:14px;color:var(--muted)}
-  .call-form .form-row{display:grid;gap:8px;margin-bottom:8px;grid-template-columns:repeat(auto-fit,minmax(140px,1fr))}
-  .call-form label{display:flex;flex-direction:column;gap:4px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
-  .call-form label input,.call-form label select,.call-form label textarea{
-    font-size:13px;padding:6px 8px;background:#0c0f15;border:1px solid var(--line);color:#f0f4fb;border-radius:4px;font-family:inherit;
-    text-transform:none;letter-spacing:0
-  }
-  .call-form label textarea{min-height:50px;resize:vertical}
-  .call-form .form-actions{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
-  .call-form .tz-row{grid-template-columns:auto 1fr;align-items:end}
-  .call-form .tz-row .ignore-tz{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text);text-transform:none;letter-spacing:0;padding-bottom:8px;cursor:pointer}
-  .call-form .tz-row .ignore-tz input[type=checkbox]{width:18px;height:18px;accent-color:var(--accent)}
-  .call-form .parent-phone-row{grid-template-columns:1fr 1fr}
+  .call-form{margin:8px 0 14px}
+  .call-form .cf-head{margin:0 0 10px;font-size:15px;color:#fff}
+  .call-form .cf-body{display:flex;flex-direction:column;gap:10px}
+  .cf-block{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+  .cf-block .cf-title{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);
+    font-weight:600;margin:0 0 6px}
+  .cf-grid{display:grid;gap:8px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+  .cf-block label{display:flex;flex-direction:column;gap:4px;font-size:11px;color:var(--muted);
+    text-transform:uppercase;letter-spacing:.5px}
+  .cf-block label input,.cf-block label select,.cf-block label textarea{
+    font-size:13px;padding:7px 9px;background:#0c0f15;border:1px solid var(--line);color:#f0f4fb;
+    border-radius:6px;font-family:inherit;text-transform:none;letter-spacing:0}
+  .cf-block label textarea{min-height:60px;resize:vertical}
+  .cf-check{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--muted);
+    text-transform:none;letter-spacing:0;cursor:pointer;align-self:end;padding-bottom:9px;white-space:nowrap}
+  .cf-check input{width:16px;height:16px;accent-color:var(--accent);flex-shrink:0}
+  /* Ссылки внутри блока */
+  .cf-links{display:flex;flex-direction:column;gap:6px}
+  .cf-links .link-row{display:flex;gap:6px;align-items:center}
+  .cf-links .link-row input{flex:0 0 150px;font-size:12px;padding:6px 8px;background:#0c0f15;
+    border:1px solid var(--line);color:#f0f4fb;border-radius:4px;text-transform:none;letter-spacing:0}
+  .cf-links .link-row input.link-url{flex:1}
+  .cf-links .link-row button{flex:0 0 auto}
+  .call-form .form-actions{display:flex;gap:8px;margin-top:4px;flex-wrap:wrap}
   .btn-small{padding:5px 10px;font-size:12px;border-radius:4px;border:1px solid var(--line);background:#1a2030;color:#cfe0ff;cursor:pointer}
   /* Модальное окно ввода результата звонка */
   .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:100000}
@@ -648,7 +675,7 @@
 
   <div class="topbar">
     <span class="title">📞 Менеджер речевых модулей</span>
-    <button class="badge version-btn" id="versionBadge" style="font-size:11px;opacity:.8" title="Что нового?">v0.65</button>
+    <button class="badge version-btn" id="versionBadge" style="font-size:11px;opacity:.8" title="Что нового?">v0.68</button>
     <button class="secondary small-btn" id="changelogBtn" style="padding:3px 10px;font-size:11px">📋 Что нового</button>
     <label class="bool-toggle" id="autosaveWrap" style="display:none;margin-right:8px;font-size:12px">
       <input type="checkbox" id="autosaveChk" checked> автосохранение
@@ -3113,45 +3140,41 @@ function buildCallCard(c){
   /* === Строка 1: когда | имя+телефон / комментарий | действия === */
   const main = document.createElement('div'); main.className='call-main';
 
-  // --- когда: окно С–ДО (крупно) + следующий перезвон + локальное время + дата ---
-  const when = document.createElement('div'); when.className='call-when';
+  // === Блок 1: время и счётчики ===
+  const when = document.createElement('div'); when.className='tile-when';
   const tzShift = (typeof c.tz==='number') ? (c.tz - DEFAULT_TZ_UTC) : 0;
-  // строка 1: окно С–ДО (крупно) + сдвиг
-  const bigLine = document.createElement('span'); bigLine.className='big';
+  // время окна С–ДО + сдвиг
+  const twMain = document.createElement('div'); twMain.className='tw-main';
   const timeSpan = document.createElement('span'); timeSpan.className='big-time';
   let timeLabel = '—';
-  if(c.timeFrom && c.timeTo) timeLabel = 'С '+c.timeFrom+'  ДО '+c.timeTo;
+  if(c.timeFrom && c.timeTo) timeLabel = 'С '+c.timeFrom+'–ДО '+c.timeTo;
   else if(c.timeFrom) timeLabel = 'С '+c.timeFrom;
   else if(c.timeTo)   timeLabel = 'ДО '+c.timeTo;
   timeSpan.textContent = timeLabel;
-  bigLine.appendChild(timeSpan);
+  twMain.appendChild(timeSpan);
   if(tzShift !== 0){
     const shiftSpan = document.createElement('span'); shiftSpan.className='big-shift';
     shiftSpan.textContent = (tzShift>0?'+':'')+tzShift;
     shiftSpan.title = 'Сдвиг от МСК: '+(tzShift>0?'+':'')+tzShift+' ч';
-    bigLine.appendChild(shiftSpan);
+    twMain.appendChild(shiftSpan);
   }
-  when.appendChild(bigLine);
-  // строка 2: следующий перезвон + локальное время клиента
-  const subLine = document.createElement('span'); subLine.className='sub-line';
+  when.appendChild(twMain);
+  // следующий + локальное время клиента
+  const twSub = document.createElement('div'); twSub.className='tw-sub';
   if(c.nextTime){
     const nx = document.createElement('span'); nx.className='next-time';
     nx.textContent = 'след: '+c.nextTime;
     nx.title = 'Время следующего перезвона ('+(c.nextDate||'')+')';
-    subLine.appendChild(nx);
+    twSub.appendChild(nx);
   }
   const nowSpan = document.createElement('span'); nowSpan.className='big-local';
-  nowSpan.textContent = '('+clientTimeStr(c.tz)+')';
+  nowSpan.textContent = 'сейчас '+clientTimeStr(c.tz);
   nowSpan.title = 'Сейчас у клиента';
-  subLine.appendChild(nowSpan);
-  when.appendChild(subLine);
-  // строка 3: дата + время создания
+  twSub.appendChild(nowSpan);
+  when.appendChild(twSub);
+  // дата + создан
+  const twDate = document.createElement('div'); twDate.className='tw-date';
   const date = document.createElement('span'); date.className='date';
-  when.appendChild(date);
-  const created = document.createElement('span'); created.className='created';
-  if(c.created) created.textContent = 'создан '+new Date(c.created).toLocaleString('ru-RU',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
-  created.title='Время создания перезвона';
-  when.appendChild(created);
   const d = parseDate(c.date);
   let dateLabel = c.date||'';
   if(d){
@@ -3164,11 +3187,19 @@ function buildCallCard(c){
     else dateLabel=d.toLocaleDateString('ru-RU',{day:'2-digit',month:'short'})+', '+weekday;
   }
   date.textContent = dateLabel;
+  twDate.appendChild(date);
+  if(c.created){
+    const created = document.createElement('span'); created.className='created';
+    created.textContent = 'создан '+new Date(c.created).toLocaleString('ru-RU',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+    created.title='Время создания перезвона';
+    twDate.appendChild(created);
+  }
+  when.appendChild(twDate);
   // история попыток — точки
   const attempts=(c.history||[]).filter(h=>h.result && h.result!=='Перенос');
   if(attempts.length){
-    const hist=document.createElement('span'); hist.className='hist';
-    const lbl=document.createElement('span'); lbl.className='lbl'; lbl.textContent='·'+attempts.length+':';
+    const hist=document.createElement('div'); hist.className='tw-hist';
+    const lbl=document.createElement('span'); lbl.className='lbl'; lbl.textContent='ист. '+attempts.length+':';
     hist.appendChild(lbl);
     attempts.slice(-6).forEach(h=>{
       const dot=document.createElement('span'); dot.className='dot';
@@ -3183,16 +3214,11 @@ function buildCallCard(c){
     });
     when.appendChild(hist);
   }
-  // бейдж «звонить» для просроченных
-  if(st==='overdue' && !c.archived){
-    const ob=document.createElement('span'); ob.className='overdue-badge'; ob.textContent='⏰ звонить';
-    when.appendChild(ob);
-  }
   main.appendChild(when);
 
   // --- информация: строка 1 = имя + телефон; строка 2 = комментарий (полный) ---
-  const info = document.createElement('div'); info.className='call-info';
-  const infoTop = document.createElement('div'); infoTop.className='info-top';
+  const info = document.createElement('div'); info.className='tile-info';
+  const infoTop = document.createElement('div'); infoTop.className='ti-top';
   const name = document.createElement('span'); name.className='name';
   name.textContent = c.parent || '(без имени)';
   infoTop.appendChild(name);
@@ -3234,36 +3260,43 @@ function buildCallCard(c){
     const cmt=document.createElement('div'); cmt.className='comment'; cmt.textContent=comment;
     info.appendChild(cmt);
   }
-  // результат звонка — отдельное поле (видно сразу; клик = редактировать)
-  const callResult=(c.result||'').trim();
-  if(callResult){
-    const res=document.createElement('div'); res.className='call-result-field';
-    res.textContent='📋 '+callResult+' ✎';
-    res.title='Клик — изменить результат звонка';
-    res.style.cursor='pointer';
-    res.onclick=(e)=>{ e.stopPropagation(); openCallResultModal(c, true); };
-    info.appendChild(res);
-  }
   main.appendChild(info);
 
-  // --- действия справа: дозвонился / удалить / редактировать ---
-  const acts = document.createElement('div'); acts.className='call-acts';
-  const editHandler=()=>{ c._editOpen=true; renderCalls(); const form=document.querySelector('.call-form-edit-'+c.id); if(form) form.scrollIntoView({behavior:'smooth',block:'center'}); };
-  if(!c.archived){
-    acts.appendChild(actBtn('✓','ok','Дозвонился — указать результат',()=>{ openCallResultModal(c); }));
-    acts.appendChild(actBtn('×','danger','Удалить',()=>{ if(confirm('Удалить перезвон?')){ CALLS.items=CALLS.items.filter(x=>x.id!==c.id); callsMarkDirty(); renderCalls(); } }));
-    acts.appendChild(actBtn('✎','','Редактировать карточку',editHandler));
-  } else {
-    acts.appendChild(actBtn('↶','','Вернуть из архива',()=>{ c.archived=false; callsMarkDirty(); renderCalls(); }));
-    acts.appendChild(actBtn('🗑','danger','Удалить навсегда',()=>{ if(confirm('Удалить безвозвратно?')){ CALLS.items=CALLS.items.filter(x=>x.id!==c.id); callsMarkDirty(); renderCalls(); } }));
-    acts.appendChild(actBtn('✎','','Редактировать карточку',editHandler));
-  }
-  main.appendChild(acts);
-
-  /* === Строка 2: результат вызова + ссылки (Звонок и админки — кликабельные) === */
+  /* === Нижние мини-блоки: управление карточкой / результат звонка / ссылки === */
   const bottom = document.createElement('div'); bottom.className='call-bottom';
+  const editHandler=()=>{ c._editOpen=true; renderCalls(); const form=document.querySelector('.call-form-edit-'+c.id); if(form) form.scrollIntoView({behavior:'smooth',block:'center'}); };
 
-  const linksBox = document.createElement('div'); linksBox.className='call-links';
+  // --- Блок 1: управление карточкой ---
+  const ctrl = document.createElement('div'); ctrl.className='cb-block cb-ctrl';
+  if(!c.archived){
+    ctrl.appendChild(actBtn('✓','ok','Дозвонился — указать результат',()=>{ openCallResultModal(c); }));
+    ctrl.appendChild(actBtn('×','danger','Удалить',()=>{ if(confirm('Удалить перезвон?')){ CALLS.items=CALLS.items.filter(x=>x.id!==c.id); callsMarkDirty(); renderCalls(); } }));
+    ctrl.appendChild(actBtn('✎','','Редактировать карточку',editHandler));
+  } else {
+    ctrl.appendChild(actBtn('↶','','Вернуть из архива',()=>{ c.archived=false; callsMarkDirty(); renderCalls(); }));
+    ctrl.appendChild(actBtn('🗑','danger','Удалить навсегда',()=>{ if(confirm('Удалить безвозвратно?')){ CALLS.items=CALLS.items.filter(x=>x.id!==c.id); callsMarkDirty(); renderCalls(); } }));
+    ctrl.appendChild(actBtn('✎','','Редактировать карточку',editHandler));
+  }
+  bottom.appendChild(ctrl);
+
+  // --- Блок 2: результат звонка (кнопки результата + записанный результат) ---
+  const resBlock = document.createElement('div'); resBlock.className='cb-block cb-result';
+  if(!c.archived){
+    resBlock.appendChild(actBtn('АО/НО','ao','Нет ответа / автоответчик / сброс (перенос на +2.5ч, авт.)',()=>{ autoReschedule(c,'АО/НО'); c.archived=false; callsMarkDirty(); renderCalls(); }));
+    resBlock.appendChild(actBtn('Перезв.','cb','Указать время перезвона',()=>{ const inline=card.querySelector('.reschedule-inline'); if(inline) inline.classList.toggle('open'); }));
+  }
+  const callRes=(c.result||'').trim();
+  if(callRes){
+    const rf=document.createElement('div'); rf.className='call-result-field';
+    rf.textContent='📋 '+callRes+' ✎';
+    rf.title='Клик — изменить результат звонка';
+    rf.onclick=(e)=>{ e.stopPropagation(); openCallResultModal(c, true); };
+    resBlock.appendChild(rf);
+  }
+  bottom.appendChild(resBlock);
+
+  // --- Блок 3: ссылки (Звонок + админки) — скруглённые прямоугольники ---
+  const linksBox = document.createElement('div'); linksBox.className='cb-block cb-links';
   const addLinkBtn = (label,url,cls)=>{
     if(!url || !String(url).trim()) return;
     const a=document.createElement('a'); a.className='link-btn '+cls; a.href=String(url).trim(); a.target='_blank'; a.rel='noopener'; a.textContent=label||'ссылка';
@@ -3280,14 +3313,8 @@ function buildCallCard(c){
   (c.links||[]).filter(l=>l.label && l.label!=='Звонок' && l.url && String(l.url).trim()).forEach(l=>{
     addLinkBtn(l.label, l.url, 'admin');
   });
-
-  if(!c.archived){
-    const res=document.createElement('div'); res.className='call-result';
-    res.appendChild(actBtn('АО/НО','ao','Нет ответа / автоответчик / сброс (перенос на +2.5ч, авт.)',()=>{ autoReschedule(c,'АО/НО'); c.archived=false; callsMarkDirty(); renderCalls(); }));
-    res.appendChild(actBtn('Перезв.','cb','Указать время перезвона',()=>{ const inline=card.querySelector('.reschedule-inline'); if(inline) inline.classList.toggle('open'); }));
-    bottom.appendChild(res);
-  }
   bottom.appendChild(linksBox);
+
   card.appendChild(main);
   card.appendChild(bottom);
 
@@ -3362,7 +3389,7 @@ function buildCallCard(c){
   // Клик по карточке — развернуть детали. Не раскрываем из интерактивных зон
   // (кнопки, ссылки, форма переноса, номер — чтобы клик/ввод там не раскрывал меню).
   card.addEventListener('click',(e)=>{
-    if(e.target.closest && e.target.closest('.call-acts,.call-result,.call-links,.reschedule-inline,.phone-num,a')) return;
+    if(e.target.closest && e.target.closest('.cb-block,.reschedule-inline,.phone-num,a')) return;
     detail.classList.toggle('open');
   });
 
@@ -3486,15 +3513,39 @@ function buildCallForm(c){
   const wrap = document.createElement('div');
   wrap.className = 'call-form' + (isEdit?(' call-form-edit-'+c.id):'');
   const h = document.createElement('h3');
+  h.className='cf-head';
   h.textContent = isEdit?'✎ Редактировать перезвон':'➕ Новый перезвон';
   wrap.appendChild(h);
 
-  const row1 = document.createElement('div'); row1.className='form-row';
+  const body = document.createElement('div'); body.className='cf-body';
+  const mkBlock = (title)=>{
+    const b=document.createElement('div'); b.className='cf-block';
+    const t=document.createElement('div'); t.className='cf-title'; t.textContent=title;
+    b.appendChild(t);
+    return b;
+  };
+
+  // --- Блок: время и дата ---
+  const bWhen = mkBlock('Время и дата');
+  const grid1 = document.createElement('div'); grid1.className='cf-grid';
   const fDate = mkField('Дата','date', c?.date||todayDateStr());
   const fFrom = mkTimeSelect('Время с', c?.timeFrom||'');
   const fTo   = mkTimeSelect('Время до', c?.timeTo||'');
-  row1.appendChild(fDate.labelWrap); row1.appendChild(fFrom.labelWrap); row1.appendChild(fTo.labelWrap);
-  wrap.appendChild(row1);
+  const fTz = mkSelect('Часовой пояс клиента',
+    CALL_TIMEZONES.map(z=>z.label),
+    (CALL_TIMEZONES.find(z=>z.utc===(c?.tz||DEFAULT_TZ_UTC))||CALL_TIMEZONES[1]).label);
+  grid1.appendChild(fDate.labelWrap);
+  grid1.appendChild(fFrom.labelWrap);
+  grid1.appendChild(fTo.labelWrap);
+  grid1.appendChild(fTz.labelWrap);
+  const fIgnore = document.createElement('label'); fIgnore.className='cf-check';
+  const fIgnoreCb = document.createElement('input'); fIgnoreCb.type='checkbox'; fIgnoreCb.checked = !!c?.ignoreTz;
+  const fIgnoreLbl = document.createElement('span'); fIgnoreLbl.textContent='Любое время (без 8–22)';
+  fIgnoreLbl.title='Не проверять ограничение 8–22 по местному времени клиента';
+  fIgnore.appendChild(fIgnoreCb); fIgnore.appendChild(fIgnoreLbl);
+  grid1.appendChild(fIgnore);
+  bWhen.appendChild(grid1);
+  body.appendChild(bWhen);
 
   // Автоподстановка родителя и телефона из реально заполненных переменных (для новой карточки)
   let autoParent='', autoPhone='';
@@ -3504,35 +3555,22 @@ function buildCallForm(c){
     autoPhone  = pull('phone')||pull('parent_phone')||pull('client_phone')||'';
   }
 
-  // Ряд 2: часовой пояс (сразу под датой/временем) + галка «любое время» (рядом)
-  const row2 = document.createElement('div'); row2.className='form-row tz-row';
-  const fTz = mkSelect('Часовой пояс клиента',
-    CALL_TIMEZONES.map(z=>z.label),
-    (CALL_TIMEZONES.find(z=>z.utc===(c?.tz||DEFAULT_TZ_UTC))||CALL_TIMEZONES[1]).label);
-  row2.appendChild(fTz.labelWrap);
-  const fIgnore = document.createElement('label'); fIgnore.className='ignore-tz';
-  const fIgnoreCb = document.createElement('input'); fIgnoreCb.type='checkbox'; fIgnoreCb.checked = !!c?.ignoreTz;
-  const fIgnoreLbl = document.createElement('span'); fIgnoreLbl.textContent='Клиент разрешил звонить в любое время (не проверять 8–22)';
-  fIgnore.appendChild(fIgnoreCb); fIgnore.appendChild(fIgnoreLbl);
-  row2.appendChild(fIgnore);
-  wrap.appendChild(row2);
-
-  // Ряд 3: имя родителя (слева) + номер телефона (справа)
-  const row3 = document.createElement('div'); row3.className='form-row parent-phone-row';
+  // --- Блок: кто ---
+  const bWho = mkBlock('Кто');
+  const grid3 = document.createElement('div'); grid3.className='cf-grid';
   const fParent = mkField('Родитель','text', (c?.parent||autoParent)||'');
   const fPhone = mkField('Телефон','text', (c?.phone||autoPhone)||'', '7...');
   // запрет на ввод «+» и лишних символов в номере телефона
   fPhone.input.addEventListener('input', ()=>{
     fPhone.input.value = fPhone.input.value.replace(/[^0-9]/g,'');
   });
-  row3.appendChild(fParent.labelWrap);
-  row3.appendChild(fPhone.labelWrap);
-  wrap.appendChild(row3);
+  grid3.appendChild(fParent.labelWrap);
+  grid3.appendChild(fPhone.labelWrap);
+  bWho.appendChild(grid3);
+  body.appendChild(bWho);
 
-  const notesL = document.createElement('label'); notesL.style.gridColumn='1/-1';
-  const notesK = document.createElement('span'); notesK.textContent='Комментарий (ученик, класс, причина, детали…)';
-  const notes = document.createElement('textarea');
-  // Предзаполнение комментария: ученик + класс + предмет — ТОЛЬКО если реально заполнены в скрипте
+  // --- Блок: комментарий ---
+  const bNotes = mkBlock('Комментарий');
   let defaultNotes = c?.notes || '';
   if(!isEdit && !defaultNotes){
     const pull = varReal;
@@ -3544,41 +3582,33 @@ function buildCallForm(c){
     if(subj) parts.push(subj);
     defaultNotes = parts.join(' · ');
   }
+  const notes = document.createElement('textarea');
   notes.value = defaultNotes;
   notes.placeholder='ученик, класс, причина, детали договорённости...';
-  notesL.appendChild(notesK); notesL.appendChild(notes);
-  wrap.appendChild(notesL);
+  bNotes.appendChild(notes);
+  body.appendChild(bNotes);
 
-  // Ссылки: Звонок + Админка + доп. админки
-  const linksWrap=document.createElement('div'); linksWrap.style.gridColumn='1/-1';
-  const linksHdr=document.createElement('div');
-  linksHdr.style.cssText='font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin:10px 0 4px';
-  linksHdr.textContent='Ссылки';
-  linksWrap.appendChild(linksHdr);
-  const linksList=document.createElement('div');
+  // --- Блок: ссылки ---
+  const bLinks = mkBlock('Ссылки');
+  const linksList=document.createElement('div'); linksList.className='cf-links';
   const existingLinks=normalizeCallLinks(c);
   function renderLinks(){
     linksList.innerHTML='';
     existingLinks.forEach((l,idx)=>{
-      const row=document.createElement('div');
-      row.style.cssText='display:flex;gap:6px;margin-bottom:4px;align-items:center';
+      const row=document.createElement('div'); row.className='link-row';
       const isCall = l.label==='Звонок';
       // Имя ссылки — редактируемое (кроме «Звонок»). Можно задать «для одного ребёнка», «для другого» и т.п.
       const lab = document.createElement('input');
       lab.type='text';
       lab.placeholder = isCall ? 'Звонок' : 'имя (напр. админка ребёнка)';
       lab.value = isCall ? 'Звонок' : (l.label||'');
-      lab.style.cssText='flex:0 0 150px;font-size:12px;padding:6px 8px;background:#0c0f15;border:1px solid var(--line);color:#f0f4fb;border-radius:4px;text-transform:none;letter-spacing:0';
       if(isCall){ lab.readOnly=true; lab.title='Название «Звонок» фиксировано'; lab.style.opacity=.55; }
       lab.oninput=()=>{ if(!isCall) l.label=lab.value.trim()||'Админка'; };
       const u=document.createElement('input');
+      u.className='link-url';
       u.placeholder = isCall ? 'https://... (ссылка на CRM для результатов звонка)' : 'https://...';
       u.value=l.url||'';
-      u.style.cssText='flex:1;font-size:13px;padding:6px 8px;background:#0c0f15;border:1px solid var(--line);color:#f0f4fb;border-radius:4px;text-transform:none;letter-spacing:0';
       u.oninput=()=>{l.url=u.value.trim();};
-      if(isCall){
-        u.placeholder = 'https://... (ссылка на CRM для результатов звонка)';
-      }
       const del=document.createElement('button');
       del.type='button';del.className='btn-small danger';del.textContent='×';del.title='Удалить';
       if(idx<2) del.style.visibility='hidden';
@@ -3596,8 +3626,10 @@ function buildCallForm(c){
     linksList.appendChild(add);
   }
   renderLinks();
-  linksWrap.appendChild(linksList);
-  wrap.appendChild(linksWrap);
+  bLinks.appendChild(linksList);
+  body.appendChild(bLinks);
+
+  wrap.appendChild(body);
 
   const acts=document.createElement('div');acts.className='form-actions';
   const save=document.createElement('button');
@@ -3710,8 +3742,11 @@ function callOpenReschedule(id){
 }
 
 /* ===== Чейнджлог (что нового) ===== */
-const APP_VERSION = 'v0.65';
+const APP_VERSION = 'v0.68';
 const APP_CHANGELOG = [
+  { v:'v0.68', text:'Редактор карточки перезвона переделан в плиточный стиль: блоки «Время и дата», «Кто», «Комментарий» и «Ссылки» — скруглённые прямоугольники (единый стиль с карточками).' },
+  { v:'v0.67', text:'Карточка перезвона: внизу три мини-блока — кнопки ✓/×/✎, кнопки «АО/НО»/«Перезв.» + записанный результат, и «Ссылки» (Звонок + админки, скруглённые прямоугольники, переносятся на новую строку). Блоки выровнены по левому краю.' },
+  { v:'v0.66', text:'Перезвоны: новый визуал — два блока (время/счётчики и имя/номер/коммент); кнопки действий внизу; просрочка подсвечивается красным (без бейджа «звонить»).' },
   { v:'v0.65', text:'Ручной перенос больше не меняет окно С-ДО — время переноса сохраняется отдельно («след: …»).' },
   { v:'v0.64', text:'Окно «Что нового»: показывается при первом открытии после обновления, есть кнопка в шапке.' },
   { v:'v0.63', text:'Автоперенос (АО/НО): округление к ближайшему получасу — 16:20 → 19:00.' },
@@ -8013,5 +8048,5 @@ autosizeAll(document);
 
 
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f"}' crossorigin="anonymous"></script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a29fd0ec7ef0e4a0',t:'MTc4NjU0MTIzMg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a2a65991ebb3e4a6',t:'MTc4NjYwOTc0Mw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
