@@ -5,9 +5,12 @@
 <title>Менеджер речевых модулей</title>
 <style>
   :root{
-    --bg:#0f1115; --panel:#181b22; --panel2:#1f2330; --line:#2a2f3d;
-    --text:#e8ecf3; --muted:#9aa3b2; --accent:#4f8cff; --accent2:#3a6fd6;
-    --ok:#2ecc71; --warn:#f1c40f; --bad:#e74c3c; --obj:#ff9f43;
+    --bg:#0b0e14; --bg2:#0e1219; --panel:#11161f; --panel2:#161d29; --panel3:#1b2332;
+    --line:#232c3d; --line2:#2e3a50; --text:#e6ecf5; --muted:#8b98ad; --muted2:#6b7890;
+    --accent:#6a9bff; --accent2:#4f7fe0; --accent-grad:linear-gradient(135deg,#6a9bff,#8a6bff);
+    --ok:#34d399; --ok-dim:#1d5a44; --warn:#fbbf24; --bad:#f87171; --obj:#fb923c;
+    --shadow:0 6px 20px rgba(0,0,0,.35); --shadow-sm:0 2px 8px rgba(0,0,0,.25);
+    --r-sm:8px; --r-md:12px; --r-lg:16px; --r-xl:22px;
     --maxw: 1900px;
   }
   *{box-sizing:border-box}
@@ -248,7 +251,7 @@
     padding:7px 10px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;min-height:42px}
   .cb-block button{padding:5px 13px;font-size:13px;border-radius:6px}
   .cb-block button.ok{background:#4caf50;border-color:#4caf50;color:#0c0f15}
-  .cb-block button.danger{border-color:rgba(231,76,60,.5);color:#ff8a80}
+  .cb-block button.danger{background:#d64545;border-color:#d64545;color:#fff;font-weight:600}
   .cb-result button.cb{background:#5fa0ff;border-color:#5fa0ff;color:#fff;font-weight:600}
   .cb-result button.no{background:#ff525233;border-color:#ff525266;color:#ffb0b0}
   .cb-result button.ao{background:#ffa72633;border-color:#ffa72666;color:#ffcc80}
@@ -707,11 +710,120 @@
   /* Крупные чекбоксы для удобного попадания (везде кроме шапки) */
   input[type=checkbox]{width:20px;height:20px;accent-color:var(--accent);cursor:pointer}
   .topbar input[type=checkbox]{width:14px;height:14px}
-  /* Белая иконка календаря в полях даты */
-  input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1);opacity:.8;cursor:pointer}
+  /* Иконка календаря — светлая при тёмной схеме (без инверсии, иначе станет чёрной) */
+  input[type=date]::-webkit-calendar-picker-indicator{opacity:.85;cursor:pointer;filter:none}
   input[type=date]::-webkit-calendar-picker-indicator:hover{opacity:1}
+  /* Тёмный нативный календарь (в перезвонах и подобном) */
+  input[type=date],input[type=time],input[type=datetime-local],input[type=month],input[type=week]{
+    color-scheme:dark}
   /* Чекбокс-плашка в map: вся плашка кликабельна */
   .map-block .bool-cell input[type=checkbox]{width:22px;height:22px}
+
+  /* ==========================================================================
+     MODERN — современный дизайн (переопределяет базовые стили, сохраняет функционал)
+  ========================================================================== */
+  body{background:radial-gradient(1200px 800px at 20% -10%, #131a28 0%, var(--bg) 55%), var(--bg);}
+  ::-webkit-scrollbar{width:10px;height:10px}
+  ::-webkit-scrollbar-thumb{background:#2b3448;border-radius:8px;border:2px solid transparent;background-clip:content-box}
+  ::-webkit-scrollbar-thumb:hover{background:#3a4660;background-clip:content-box}
+  ::-webkit-scrollbar-track{background:transparent}
+
+  /* Верхняя панель */
+  .topbar{background:rgba(14,18,25,.75);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);padding:10px 16px}
+  .topbar .title{font-weight:700;letter-spacing:.2px}
+  .topbar .mode{background:rgba(27,35,50,.7);border:1px solid var(--line);padding:4px;border-radius:var(--r-md)}
+  .topbar .mode button{font-weight:600;border-radius:var(--r-sm);transition:all .18s}
+  .topbar .mode button.active{background:var(--accent-grad);box-shadow:0 2px 8px rgba(106,155,255,.4)}
+
+  /* Прогресс-бар этапов */
+  .stages{background:rgba(14,18,25,.6);backdrop-filter:blur(8px);padding:12px 16px}
+  .stage{border-radius:var(--r-md);box-shadow:var(--shadow-sm);transition:all .18s}
+  .stage.current{background:linear-gradient(135deg,#1b2a4a,#17213a);border-color:var(--accent)}
+  .stage .num{box-shadow:inset 0 0 0 1px rgba(255,255,255,.06)}
+
+  /* Колонки */
+  .main{gap:1px;background:var(--line)}
+  .col{background:var(--bg2);padding:16px}
+
+  /* Общие карточки/панели */
+  .module,.ed-form .card,.var-card,.stage-card,.obj-card,.btn-card,.mod-block,.branch-card,.branch-card{
+    border-radius:var(--r-md);box-shadow:var(--shadow-sm);border-color:var(--line)}
+  .module{background:linear-gradient(180deg,var(--panel2),var(--panel))}
+
+  /* Кнопки */
+  button{border-radius:var(--r-sm);transition:transform .1s, box-shadow .2s, filter .2s, background .2s}
+  button:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.3)}
+  button:active{transform:translateY(0)}
+  button.secondary{background:var(--panel3);border-color:var(--line)}
+  button.ghost:hover{background:var(--panel3)}
+  .btn-small{border-radius:var(--r-sm);background:var(--panel3);border-color:var(--line);box-shadow:inset 0 0 0 1px rgba(255,255,255,.02)}
+  .btn-small.primary{background:var(--accent-grad);border-color:transparent;box-shadow:0 2px 8px rgba(106,155,255,.35)}
+
+  /* Инпуты */
+  input,textarea,select{background:var(--panel3);border-color:var(--line);border-radius:var(--r-sm);transition:border-color .15s, box-shadow .15s}
+  input:focus,textarea:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(106,155,255,.15)}
+  /* Выпадающие списки — тёмные (чтобы option не были белыми на белом) */
+  select option{background:#141a26;color:#e6ecf5}
+  select:focus option:checked{background:var(--accent2);color:#fff}
+
+  /* Чипы-фильтры */
+  .calls-filters .chip{border-radius:999px;border-color:var(--line);transition:all .18s}
+  .calls-filters .chip:hover{border-color:var(--accent);transform:translateY(-1px)}
+  .calls-filters .chip.active{background:var(--accent-grad);border-color:transparent;box-shadow:0 2px 8px rgba(106,155,255,.35)}
+
+  /* Поиск */
+  .calls-search input[type=text],.obj-search,.ed-search,.var-search{border-radius:var(--r-md);background:var(--panel3);border-color:var(--line)}
+
+  /* Карточки перезвонов */
+  .call-card{background:linear-gradient(180deg,#141b29,#11161f);border-radius:var(--r-xl);border-color:var(--line2);
+    box-shadow:var(--shadow);transition:box-shadow .2s, transform .15s}
+  .call-card:hover{box-shadow:0 10px 28px rgba(0,0,0,.45)}
+  .call-card.overdue{background:linear-gradient(180deg,#251a1c,#1c1215);border-color:#5a2c31}
+  .call-card.today{background:linear-gradient(180deg,#201d15,#181610);border-color:#5a4a22}
+  .call-card.upcoming{background:linear-gradient(180deg,#142019,#101913);border-color:#24483a}
+  .call-card.archived{background:linear-gradient(180deg,#15171d,#111216);border-color:#2a2f3d}
+  .tile-when,.tile-info{background:rgba(20,27,41,.6);border-radius:var(--r-lg);border-color:var(--line);box-shadow:inset 0 1px 0 rgba(255,255,255,.03)}
+  .tile-when .big-time{color:#fff;letter-spacing:.3px}
+  .cb-block{background:rgba(20,27,41,.6);border-radius:var(--r-lg);border-color:var(--line);box-shadow:inset 0 1px 0 rgba(255,255,255,.03)}
+  .cb-links .link-btn{border-radius:999px;background:linear-gradient(135deg,#3a5fb0,#35509a);box-shadow:0 2px 6px rgba(0,0,0,.3)}
+  .cb-links .link-btn.zvonok{background:linear-gradient(135deg,#22a06b,#1d8a5c)}
+  .cb-links .link-btn:hover{transform:translateY(-1px);filter:brightness(1.1)}
+
+  /* Форма перезвона */
+  .call-form{background:linear-gradient(180deg,#141b29,#11161f);border-radius:var(--r-xl);box-shadow:var(--shadow)}
+
+  /* Модалки */
+  .modal-overlay{backdrop-filter:blur(4px);background:rgba(6,8,12,.6)}
+  .modal-box{background:linear-gradient(180deg,#161d29,#121722);border-radius:var(--r-lg);border-color:var(--line);box-shadow:var(--shadow)}
+
+  /* Редактор */
+  .editor-grid{background:var(--line)}
+  .editor-grid > .col{background:var(--bg2)}
+
+  /* Палитра переменных */
+  .var-palette,.vp-chip{border-radius:var(--r-sm)}
+  .vp-chip:hover{border-color:var(--accent);background:var(--panel3)}
+
+  /* Списки/история */
+  .history .item,.obj-list .item,.ed-list .item{border-radius:var(--r-sm);border-color:var(--line);transition:border-color .15s, background .15s}
+  .history .item:hover,.obj-list .item:hover,.ed-list .item:hover{border-color:var(--accent)}
+
+  /* Копируемые блоки */
+  .copy-block{border-radius:6px}
+  .copy-toast{background:linear-gradient(135deg,#1b2a4a,#16203a);border-color:var(--accent)}
+
+  /* Возражения */
+  .obj-card{background:linear-gradient(180deg,#1f1810,#18130c);border-radius:var(--r-lg)}
+  .obj-card .collapsible{background:rgba(255,159,67,.05)}
+
+  /* Календарь графика */
+  .sched-day{border-radius:var(--r-sm);transition:transform .12s, filter .12s}
+  .sched-day:hover{transform:translateY(-1px)}
+  .sched-mode{border-radius:var(--r-sm);background:var(--panel3);border-color:var(--line)}
+  .sched-mode:has(input:checked){background:var(--accent-grad);border-color:transparent}
+
+  /* Заметки оператора */
+  textarea.op-notes{background:var(--panel3);border-radius:var(--r-sm)}
 </style>
 </head>
 <body>
@@ -719,7 +831,7 @@
 
   <div class="topbar">
     <span class="title">📞 Менеджер речевых модулей</span>
-    <button class="badge version-btn" id="versionBadge" style="font-size:11px;opacity:.8" title="Что нового?">v0.72</button>
+    <button class="badge version-btn" id="versionBadge" style="font-size:11px;opacity:.8" title="Что нового?">v0.74</button>
     <button class="secondary small-btn" id="changelogBtn" style="padding:3px 10px;font-size:11px">📋 Что нового</button>
     <label class="bool-toggle" id="autosaveWrap" style="display:none;margin-right:8px;font-size:12px">
       <input type="checkbox" id="autosaveChk" checked> автосохранение
@@ -3663,10 +3775,10 @@ function buildCallForm(c){
   // время окна С–ДО (крупно, как big-time в карточке)
   const twMain = document.createElement('div'); twMain.className='tw-main'; twMain.style.cssText='flex-wrap:wrap;gap:4px';
   const sLbl=document.createElement('span'); sLbl.textContent='С '; sLbl.style.cssText='font-size:18px;font-weight:700;color:#fff';
-  fFrom.select.className='cf-inp'; fFrom.select.style.cssText='font-size:18px;font-weight:700;background:transparent;border:1px dashed rgba(255,255,255,.25);color:#fff;border-radius:6px;padding:2px 4px;width:auto';
+  fFrom.select.className='cf-inp'; fFrom.select.style.cssText='font-size:18px;font-weight:700;background:#141a26;border:1px solid var(--line);color:#fff;border-radius:6px;padding:2px 6px;width:auto';
   twMain.appendChild(sLbl); twMain.appendChild(fFrom.select);
   const toLbl=document.createElement('span'); toLbl.textContent=' ДО '; toLbl.style.cssText='font-size:18px;font-weight:700;color:#fff';
-  fTo.select.className='cf-inp'; fTo.select.style.cssText='font-size:18px;font-weight:700;background:transparent;border:1px dashed rgba(255,255,255,.25);color:#fff;border-radius:6px;padding:2px 4px;width:auto';
+  fTo.select.className='cf-inp'; fTo.select.style.cssText='font-size:18px;font-weight:700;background:#141a26;border:1px solid var(--line);color:#fff;border-radius:6px;padding:2px 6px;width:auto';
   twMain.appendChild(toLbl); twMain.appendChild(fTo.select);
   when.appendChild(twMain);
   // строка: дата | часовой пояс | галка «любое время» — компактно в одну строку
@@ -4017,8 +4129,10 @@ function callOpenReschedule(id){
 }
 
 /* ===== Чейнджлог (что нового) ===== */
-const APP_VERSION = 'v0.72';
+const APP_VERSION = 'v0.74';
 const APP_CHANGELOG = [
+  { v:'v0.74', text:'Нативный календарь в полях даты (перезвоны, перенос, график) — тёмный (color-scheme: dark).' },
+  { v:'v0.73', text:'Современный дизайн стал основным: глубокая сине-чёрная палитра, градиентные акценты, мягкие тени и скругления, глассморфизм, кастомный скроллбар. Выпадающие списки перезвонов (время, часовой пояс/оффсет) — тёмные, без «белого на белом».' },
   { v:'v0.72', text:'Форма перезвона (создание/редактирование) выглядит как карточка: время С/ДО, дата и часовой пояс — в плитке времени; имя, номер и комментарий — в плитке контакта; ссылки — списком внизу. Галка «любое время» → «00:00–23:59» с подсказкой. Кнопки типажа графика — в общем стиле; иконки календаря белые.' },
   { v:'v0.71', text:'График оператора: типаж «Неделя» или «2/2» (любое соотношение N/M, напр. 1/1, 3/5). Исправлено чередование — в режиме «2/2» выходные сразу видны (цикл от сегодня). Ручная правка дня хранит абсолютный статус и сохраняется при смене паттерна; обозначается пунктирной обводкой.' },
   { v:'v0.70', text:'Рабочие дни оператора: календарь на 4 недели (зелёный = рабочий, красный = выходной). Клик по дню переопределяет его вручную, повторный клик — возвращает к паттерну. Автоперенос (АО/НО) — только на рабочие дни; ручной перенос — на любой. Кнопка «🗓 График».' },
