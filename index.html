@@ -782,6 +782,9 @@
   .call-card.today{background:linear-gradient(180deg,#201d15,#181610);border-color:#5a4a22}
   .call-card.upcoming{background:linear-gradient(180deg,#142019,#101913);border-color:#24483a}
   .call-card.archived{background:linear-gradient(180deg,#15171d,#111216);border-color:#2a2f3d}
+  /* Выделение карточки после копирования номера — заметная зелёная обводка (перекрывает состояния) */
+  .call-card.copied-num{background:linear-gradient(180deg,#0e3327,#0b281f) !important;border-color:#2ecc71 !important;
+    box-shadow:0 0 0 2px rgba(46,204,113,.65), 0 4px 16px rgba(46,204,113,.35) !important}
   .tile-when,.tile-info{background:rgba(20,27,41,.6);border-radius:var(--r-lg);border-color:var(--line);box-shadow:inset 0 1px 0 rgba(255,255,255,.03)}
   .tile-when .big-time{color:#fff;letter-spacing:.3px}
   .cb-block{background:rgba(20,27,41,.6);border-radius:var(--r-lg);border-color:var(--line);box-shadow:inset 0 1px 0 rgba(255,255,255,.03)}
@@ -831,7 +834,7 @@
 
   <div class="topbar">
     <span class="title">📞 Менеджер речевых модулей</span>
-    <button class="badge version-btn" id="versionBadge" style="font-size:11px;opacity:.8" title="Что нового?">v0.74</button>
+    <button class="badge version-btn" id="versionBadge" style="font-size:11px;opacity:.8" title="Что нового?">v0.75</button>
     <button class="secondary small-btn" id="changelogBtn" style="padding:3px 10px;font-size:11px">📋 Что нового</button>
     <label class="bool-toggle" id="autosaveWrap" style="display:none;margin-right:8px;font-size:12px">
       <input type="checkbox" id="autosaveChk" checked> автосохранение
@@ -2828,6 +2831,19 @@ function fmtDate(d){
   const y=d.getFullYear(), M=String(d.getMonth()+1).padStart(2,'0'), D=String(d.getDate()).padStart(2,'0');
   return `${y}-${M}-${D}`;
 }
+/* Человекочитаемая дата звонка: сегодня / завтра / вчера / «17 авг, пн» */
+function fmtCallDate(dateStr){
+  if(!dateStr) return '';
+  const d = parseDate(dateStr);
+  if(!d) return dateStr;
+  const now=new Date(); const td=new Date(now); td.setHours(0,0,0,0);
+  const diff=Math.round((d-td)/86400000);
+  const weekday=['вс','пн','вт','ср','чт','пт','сб'][d.getDay()];
+  if(diff===0) return 'сегодня';
+  if(diff===1) return 'завтра';
+  if(diff===-1) return 'вчера';
+  return d.toLocaleDateString('ru-RU',{day:'2-digit',month:'short'})+', '+weekday;
+}
 function parseTime(s){
   if(!s) return null;
   const m = String(s).match(/^(\d{1,2}):(\d{2})$/);
@@ -3415,18 +3431,7 @@ function buildCallCard(c){
   // дата + создан
   const twDate = document.createElement('div'); twDate.className='tw-date';
   const date = document.createElement('span'); date.className='date';
-  const d = parseDate(c.date);
-  let dateLabel = c.date||'';
-  if(d){
-    const now=new Date(); const td=new Date(now); td.setHours(0,0,0,0);
-    const diff=Math.round((d-td)/86400000);
-    const weekday=['вс','пн','вт','ср','чт','пт','сб'][d.getDay()];
-    if(diff===0) dateLabel='сегодня';
-    else if(diff===1) dateLabel='завтра';
-    else if(diff===-1) dateLabel='вчера';
-    else dateLabel=d.toLocaleDateString('ru-RU',{day:'2-digit',month:'short'})+', '+weekday;
-  }
-  date.textContent = dateLabel;
+  date.textContent = fmtCallDate(c.date) || c.date || '';
   twDate.appendChild(date);
   if(c.created){
     const created = document.createElement('span'); created.className='created';
@@ -3614,7 +3619,7 @@ function buildCallCard(c){
       t.textContent=new Date(ev.ts).toLocaleString('ru-RU',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
       const txt=document.createElement('span');
       let s = ev.result||'—';
-      if(ev.newDate) s += ' → '+ev.newDate+(ev.newFrom?' '+ev.newFrom:'')+(ev.reason?' ('+ev.reason+')':(ev.auto?' (авто)':''));
+      if(ev.newDate) s += ' → '+fmtCallDate(ev.newDate)+(ev.newFrom?' '+ev.newFrom:'')+(ev.reason?' ('+ev.reason+')':(ev.auto?' (авто)':''));
       txt.textContent=s;
       row.appendChild(t); row.appendChild(txt);
       detail.appendChild(row);
@@ -3780,6 +3785,12 @@ function buildCallForm(c){
   const toLbl=document.createElement('span'); toLbl.textContent=' ДО '; toLbl.style.cssText='font-size:18px;font-weight:700;color:#fff';
   fTo.select.className='cf-inp'; fTo.select.style.cssText='font-size:18px;font-weight:700;background:#141a26;border:1px solid var(--line);color:#fff;border-radius:6px;padding:2px 6px;width:auto';
   twMain.appendChild(toLbl); twMain.appendChild(fTo.select);
+  // «следующий» — точное время следующего звонка, прямо в строке С/ДО
+  const nxLbl=document.createElement('span'); nxLbl.textContent=' · след: '; nxLbl.style.cssText='font-size:13px;font-weight:600;color:var(--accent)';
+  const fNextTime = mkTimeSelect('', c?.nextTime||'');
+  fNextTime.select.className='cf-inp'; fNextTime.select.style.cssText='font-size:18px;font-weight:700;background:#141a26;border:1px solid var(--line);color:#fff;border-radius:6px;padding:2px 6px;width:auto';
+  fNextTime.select.title='Точное время следующего звонка (без рамок С/ДО). Дата берётся из даты перезвона.';
+  twMain.appendChild(nxLbl); twMain.appendChild(fNextTime.select);
   when.appendChild(twMain);
   // строка: дата | часовой пояс | галка «любое время» — компактно в одну строку
   const twSub = document.createElement('div'); twSub.className='tw-sub';
@@ -3811,9 +3822,26 @@ function buildCallForm(c){
   infoTop.appendChild(fParent.input);
   const fPhone = mkField('Телефон','text', (c?.phone||autoPhone)||'', '7...');
   fPhone.input.className='cf-inp'; fPhone.input.style.cssText='font-size:16px;font-weight:700;color:#cfe0ff;flex:0 0 150px';
-  // запрет на ввод «+» и лишних символов в номере телефона
+  // Поле номера — строго числовое: физически нельзя ввести/вставить «+» и другие нецифровые символы
+  fPhone.input.type='tel';
+  fPhone.input.inputMode='numeric';
+  fPhone.input.autocomplete='tel';
+  fPhone.input.addEventListener('beforeinput', (e)=>{
+    // блокируем вставку/ввод, если результат содержал бы нецифры
+    if(e.data && /[^0-9]/.test(e.data)) e.preventDefault();
+  });
+  fPhone.input.addEventListener('keydown', (e)=>{
+    // явная блокировка клавиш «+», «-», «e», «E» и пробела
+    if(['+','-','e','E',' '].includes(e.key)) e.preventDefault();
+    if(e.key.length===1 && !/[0-9]/.test(e.key)) e.preventDefault();
+  });
+  fPhone.input.addEventListener('paste', (e)=>{
+    // запрещаем вставку, если в буфере есть нецифры
+    const txt = (e.clipboardData||window.clipboardData).getData('text')||'';
+    if(/[^0-9]/.test(txt)) e.preventDefault();
+  });
   fPhone.input.addEventListener('input', ()=>{
-    fPhone.input.value = fPhone.input.value.replace(/[^0-9]/g,'');
+    fPhone.input.value = fPhone.input.value.replace(/[^0-9]/g,''); // страховка
   });
   infoTop.appendChild(fPhone.input);
   info.appendChild(infoTop);
@@ -3895,6 +3923,14 @@ function buildCallForm(c){
       tz: (CALL_TIMEZONES.find(z=>z.label===fTz.select.value)||CALL_TIMEZONES[1]).utc,
       ignoreTz: !!fIgnoreCb.checked
     };
+    // точное время следующего звонка (если задано) → nextTime; дата берётся из даты перезвона
+    const nxTime = fNextTime.select.value;
+    if(nxTime){
+      payload.nextDate = date;
+      payload.nextTime = nxTime;
+    } else {
+      payload.nextDate = payload.nextTime = '';
+    }
     if(isEdit){
       Object.assign(c,payload); c._editOpen=false;
     } else {
@@ -4129,8 +4165,9 @@ function callOpenReschedule(id){
 }
 
 /* ===== Чейнджлог (что нового) ===== */
-const APP_VERSION = 'v0.74';
+const APP_VERSION = 'v0.75';
 const APP_CHANGELOG = [
+  { v:'v0.75', text:'В форме перезвона рядом с С/ДО добавлен выпадающий список «следующий» — точное время следующего звонка (записывается как nextTime; дата берётся из даты перезвона), без рамок С/ДО. Поле номера телефона — строго числовое (tel/numeric): символ «+» и буквы невозможно ввести или вставить. Выделение карточки после копирования номера — заметная зелёная обводка (перекрывает состояния). В истории звонков дата переноса отображается по-человечески (сегодня/завтра/вчера/«17 авг, пн»), а не сырым YYYY-MM-DD.' },
   { v:'v0.74', text:'Нативный календарь в полях даты (перезвоны, перенос, график) — тёмный (color-scheme: dark).' },
   { v:'v0.73', text:'Современный дизайн стал основным: глубокая сине-чёрная палитра, градиентные акценты, мягкие тени и скругления, глассморфизм, кастомный скроллбар. Выпадающие списки перезвонов (время, часовой пояс/оффсет) — тёмные, без «белого на белом».' },
   { v:'v0.72', text:'Форма перезвона (создание/редактирование) выглядит как карточка: время С/ДО, дата и часовой пояс — в плитке времени; имя, номер и комментарий — в плитке контакта; ссылки — списком внизу. Галка «любое время» → «00:00–23:59» с подсказкой. Кнопки типажа графика — в общем стиле; иконки календаря белые.' },
