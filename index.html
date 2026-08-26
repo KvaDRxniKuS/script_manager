@@ -31,9 +31,15 @@
   /* Бейдж-счётчик на кнопке вкладки «Перезвоны» */
   .mode-badge{display:inline-block;background:#e74c3c;color:#fff;border-radius:999px;
     min-width:18px;height:18px;line-height:18px;font-size:11px;font-weight:700;text-align:center;padding:0 5px;margin-left:4px}
-  .topbar .save-state{font-size:12px;color:var(--muted);margin-right:8px}
-  .topbar .save-state.dirty{color:var(--warn)}
-  .topbar .save-state.saved{color:var(--ok)}
+  .topbar .save-state{font-size:12px;color:var(--muted);margin-right:8px;
+    display:inline-flex;align-items:center;padding:6px 14px;border-radius:8px;
+    transition:opacity .5s ease, transform .5s ease, background .2s, color .2s, border-color .2s;
+    opacity:1;transform:translateY(0);border:1px solid transparent}
+  .topbar .save-state.saved{background:linear-gradient(135deg,#10b981,#059669);color:#fff;font-weight:600;
+    border-color:transparent;box-shadow:0 2px 8px rgba(16,185,129,.35)}
+  .topbar .save-state.dirty{color:#f59e0b;background:rgba(245,158,11,.14);
+    border:1px solid rgba(245,158,11,.3);font-weight:600}
+  .topbar .save-state.fade-hidden{opacity:0;transform:translateY(-4px);transition:opacity 2s ease, transform 2s ease}
 
   /* ===== Прогресс-бар этапов ===== */
   .stages{display:flex;gap:6px;padding:10px 14px;background:#13161d;
@@ -462,7 +468,7 @@
     background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:6px 14px;cursor:pointer;justify-self:start}
   .map-block .map-row .bool-cell input{margin:0;cursor:pointer}
   .map-block .map-row .add-row{grid-column:1 / -1;justify-self:stretch}
-  .map-block .map-row button.danger-btn{padding:4px 10px;font-size:12px;justify-self:end}
+  .map-block .map-row button.danger-btn{padding:2px 7px;font-size:12px;justify-self:end;flex-shrink:0}
   /* Map: 4 колонки (grip, key, value, delete) или 3 (key, value, delete) */
   .map-block .map-row.map-row-4{grid-template-columns: auto minmax(120px, 1fr) minmax(180px, 1fr) auto}
   .map-block .map-row.map-row-3{grid-template-columns: minmax(120px, 1fr) minmax(180px, 1fr) auto}
@@ -834,7 +840,7 @@
 
   <div class="topbar">
     <span class="title">📞 Менеджер речевых модулей</span>
-    <button class="badge version-btn" id="versionBadge" style="font-size:11px;opacity:.8" title="Что нового?">v0.75</button>
+    <button class="badge version-btn" id="versionBadge" style="font-size:11px;opacity:.8" title="Что нового?">v0.77</button>
     <button class="secondary small-btn" id="changelogBtn" style="padding:3px 10px;font-size:11px">📋 Что нового</button>
     <label class="bool-toggle" id="autosaveWrap" style="display:none;margin-right:8px;font-size:12px">
       <input type="checkbox" id="autosaveChk" checked> автосохранение
@@ -1948,15 +1954,20 @@ function updateSaveBtn(){
     else if(fsaOn && !AUTOSAVE_ARMED)       st.textContent = '⚠ автосейв заблокирован — нажми «Сохранить» вручную'+partsStr;
     else                                     st.textContent = '● несохранённые изменения'+partsStr;
     st.className = 'save-state dirty';
+    st.classList.remove('fade-hidden');
+    clearTimeout(st._fade);
   } else {
     btn.textContent = fsaOn ? '💾 Сохранить + бэкап' : '💾 Скачать файлы';
     if(fsaOn){
-      if(AUTOSAVE_ARMED) st.textContent = AUTOSAVE ? '✓ автосохранено (с защитой от пустой перезаписи)' : '✓ сохранено';
-      else               st.textContent = '⚠ файл подключён, но автосейв пока заблокирован — нажми «Сохранить» один раз';
+      st.textContent = '✓ сохранено';
     } else {
-      st.textContent = '✓ в памяти (нет привязки к файлам)';
+      st.textContent = '✓ в памяти';
     }
     st.className = 'save-state saved';
+    st.classList.remove('fade-hidden');
+    // Плавно скрыть через 5с: появление 0.5с, удержание ~3с, скрытие 2с
+    clearTimeout(st._fade);
+    st._fade = setTimeout(()=>st.classList.add('fade-hidden'), 5000);
   }
 }
 let AUTOSAVE_ARMED = false;
@@ -3206,10 +3217,10 @@ function lastCallMinutes(c, now){
   const hist = (c.history||[]).filter(h=>h && h.ts && h.result && h.result!=='Перенос');
   if(hist.length){
     // время последнего звонка — из ts записи (момент нажатия НО/АО/Сброс),
-    // время дня берём как есть (это время МСК, в котором работает оператор)
+    // приводим к МСК (DEFAULT_TZ_UTC), не завися от таймзоны браузера оператора.
     const last = hist[hist.length-1];
-    const t = new Date(last.ts);
-    return t.getHours()*60 + t.getMinutes();
+    const d = new Date(last.ts + now.getTimezoneOffset()*60000 + DEFAULT_TZ_UTC*3600*1000);
+    return d.getHours()*60 + d.getMinutes();
   }
   return now.getHours()*60 + now.getMinutes();
 }
@@ -3720,12 +3731,17 @@ function mkTimeSelect(label, value){
   const opts = [''].concat(CALL_TIME_SLOTS);
   return mkSelect(label, opts, value||'');
 }
-/* Извлечь номер из ссылки на звонок (CRM). Ссылка вида ...&called=79...&... */
+/* Извлечь номер из ссылки на звонок (CRM). Ссылка вида ...&called=79...&...
+   Из значения убираются все нецифровые символы (в т.ч. «+» и 8 в начале → 7). */
 function extractCalledFromUrl(url){
   if(!url) return '';
   try{
     const m = String(url).match(/[?&]called=([^&#\s]+)/);
-    if(m && m[1]) return decodeURIComponent(m[1]);
+    if(m && m[1]){
+      let n = decodeURIComponent(m[1]).replace(/\D/g,'');
+      if(n.length===11 && n[0]==='8') n = '7'+n.slice(1);
+      return n;
+    }
   }catch(e){}
   return '';
 }
@@ -3822,26 +3838,27 @@ function buildCallForm(c){
   infoTop.appendChild(fParent.input);
   const fPhone = mkField('Телефон','text', (c?.phone||autoPhone)||'', '7...');
   fPhone.input.className='cf-inp'; fPhone.input.style.cssText='font-size:16px;font-weight:700;color:#cfe0ff;flex:0 0 150px';
-  // Поле номера — строго числовое: физически нельзя ввести/вставить «+» и другие нецифровые символы
+  // Поле номера — строго числовое: «+» и другие нецифровые символы нельзя ввести,
+  // но вставка (Ctrl+V / Cmd+V) работает — лишнее вычищается автоматически
   fPhone.input.type='tel';
   fPhone.input.inputMode='numeric';
   fPhone.input.autocomplete='tel';
   fPhone.input.addEventListener('beforeinput', (e)=>{
-    // блокируем вставку/ввод, если результат содержал бы нецифры
+    // не блокируем вставку (paste) — она чистится в input
+    if(e.inputType==='insertFromPaste') return;
+    // блокируем ввод нецифр при печати
     if(e.data && /[^0-9]/.test(e.data)) e.preventDefault();
   });
   fPhone.input.addEventListener('keydown', (e)=>{
-    // явная блокировка клавиш «+», «-», «e», «E» и пробела
-    if(['+','-','e','E',' '].includes(e.key)) e.preventDefault();
+    // не мешаем горячим клавишам (Ctrl/Cmd + V/A/C/X)
+    if(e.ctrlKey || e.metaKey) return;
+    // блокировка «+», «-», «e», «E», пробела и букв
     if(e.key.length===1 && !/[0-9]/.test(e.key)) e.preventDefault();
   });
-  fPhone.input.addEventListener('paste', (e)=>{
-    // запрещаем вставку, если в буфере есть нецифры
-    const txt = (e.clipboardData||window.clipboardData).getData('text')||'';
-    if(/[^0-9]/.test(txt)) e.preventDefault();
-  });
   fPhone.input.addEventListener('input', ()=>{
-    fPhone.input.value = fPhone.input.value.replace(/[^0-9]/g,''); // страховка
+    // страховка: вычищаем всё, кроме цифр (включая «+» при вставке)
+    const clean = fPhone.input.value.replace(/[^0-9]/g,'');
+    if(fPhone.input.value !== clean) fPhone.input.value = clean;
   });
   infoTop.appendChild(fPhone.input);
   info.appendChild(infoTop);
@@ -4165,9 +4182,11 @@ function callOpenReschedule(id){
 }
 
 /* ===== Чейнджлог (что нового) ===== */
-const APP_VERSION = 'v0.75';
+const APP_VERSION = 'v0.77';
 const APP_CHANGELOG = [
-  { v:'v0.75', text:'В форме перезвона рядом с С/ДО добавлен выпадающий список «следующий» — точное время следующего звонка (записывается как nextTime; дата берётся из даты перезвона), без рамок С/ДО. Поле номера телефона — строго числовое (tel/numeric): символ «+» и буквы невозможно ввести или вставить. Выделение карточки после копирования номера — заметная зелёная обводка (перекрывает состояния). В истории звонков дата переноса отображается по-человечески (сегодня/завтра/вчера/«17 авг, пн»), а не сырым YYYY-MM-DD.' },
+  { v:'v0.77', text:'Фикс таймзоны автопереноса (АО/НО): время последнего звонка теперь считается по МСК, а не по локальному времени компьютера оператора — перенос больше не уезжает на несколько часов вперёд у пользователей не в МСК.' },
+  { v:'v0.76', text:'Мелкие правки: крестик удаления у enum-списка компактный (не вылезает за обводку); индикатор сохранения — зелёная плашка «✓ сохранено» с плавным автоскрытием.' },
+  { v:'v0.75', text:'В форме перезвона рядом с С/ДО добавлен выпадающий список «следующий» — точное время следующего звонка (записывается как nextTime; дата берётся из даты перезвона), без рамок С/ДО. Поле номера телефона — строго числовое (tel/numeric): символ «+» и буквы невозможно ввести или вставить. Выделение карточки после копирования номера — заметная зелёная обводка (перекрывает состояния). Крестик удаления у переменной-списка enum стал компактным (не вылезает за обводку). Индикатор сохранения — зелёная плашка «✓ сохранено» с плавным автоскрытием (появление 0.5с, удержание ~3с, скрытие 2с). В истории звонков дата переноса отображается по-человечески (сегодня/завтра/вчера/«17 авг, пн»), а не сырым YYYY-MM-DD.' },
   { v:'v0.74', text:'Нативный календарь в полях даты (перезвоны, перенос, график) — тёмный (color-scheme: dark).' },
   { v:'v0.73', text:'Современный дизайн стал основным: глубокая сине-чёрная палитра, градиентные акценты, мягкие тени и скругления, глассморфизм, кастомный скроллбар. Выпадающие списки перезвонов (время, часовой пояс/оффсет) — тёмные, без «белого на белом».' },
   { v:'v0.72', text:'Форма перезвона (создание/редактирование) выглядит как карточка: время С/ДО, дата и часовой пояс — в плитке времени; имя, номер и комментарий — в плитке контакта; ссылки — списком внизу. Галка «любое время» → «00:00–23:59» с подсказкой. Кнопки типажа графика — в общем стиле; иконки календаря белые.' },
@@ -8479,7 +8498,6 @@ autosizeAll(document);
 </script>
 
 
-<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f"}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f"}' crossorigin="anonymous"></script>
 </body>
 </html>
