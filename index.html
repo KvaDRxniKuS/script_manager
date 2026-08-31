@@ -243,7 +243,7 @@
   .tile-info .phone-num{font-size:17px;cursor:pointer;font-weight:700;color:#cfe0ff;font-variant-numeric:tabular-nums;padding:0 4px;border-radius:4px;transition:background .15s}
   .tile-info .phone-num:hover{background:rgba(79,140,255,.18)}
   .tile-info .phone-num.copied{background:rgba(46,204,113,.3);color:#a9f0c3}
-  .tile-info .comment{font-size:14px;color:#d8e2f2;white-space:normal;word-wrap:break-word;min-width:0}
+  .tile-info .comment{font-size:14px;color:#d8e2f2;white-space:pre-wrap;word-wrap:break-word;min-width:0}
   .tile-info .call-result-field{font-size:13px;color:#a9f0c3;background:rgba(46,204,113,.12);border:1px dashed rgba(46,204,113,.4);border-radius:6px;padding:2px 8px;white-space:normal;word-wrap:break-word;min-width:0;align-self:flex-start;cursor:pointer}
 
   /* Выделение карточки, из которой последним скопирован номер */
@@ -457,8 +457,8 @@
   /* Map-переменная (key→value). Inline-таблица: колонки сами подгоняются под содержимое. */
   .map-block{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:6px;margin-bottom:8px;
     display:block;max-width:100%}
-  .map-block .map-row{display:grid;grid-template-columns: auto minmax(180px, 1fr) auto;
-    gap:4px 10px;margin-bottom:4px;align-items:center;justify-items:stretch}
+  .map-block .map-row{display:grid;grid-template-columns: auto minmax(0, 1fr) auto;
+    gap:4px 8px;margin-bottom:4px;align-items:center;justify-items:stretch}
   .map-block .map-row .dnd-grip{justify-self:start}
   .map-block .map-row input[type=text], .map-block .map-row input[type=number],
   .map-block .map-row select{padding:6px 10px;font-size:13px;width:100%;min-width:0;box-sizing:border-box}
@@ -468,10 +468,10 @@
     background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:6px 14px;cursor:pointer;justify-self:start}
   .map-block .map-row .bool-cell input{margin:0;cursor:pointer}
   .map-block .map-row .add-row{grid-column:1 / -1;justify-self:stretch}
-  .map-block .map-row button.danger-btn{padding:2px 7px;font-size:12px;justify-self:end;flex-shrink:0}
+  .map-block .map-row button.danger-btn{padding:2px 6px;font-size:12px;justify-self:end;flex-shrink:0;min-width:0;white-space:nowrap}
   /* Map: 4 колонки (grip, key, value, delete) или 3 (key, value, delete) */
-  .map-block .map-row.map-row-4{grid-template-columns: auto minmax(120px, 1fr) minmax(180px, 1fr) auto}
-  .map-block .map-row.map-row-3{grid-template-columns: minmax(120px, 1fr) minmax(180px, 1fr) auto}
+  .map-block .map-row.map-row-4{grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr) auto}
+  .map-block .map-row.map-row-3{grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto}
 
   /* ===== Правая колонка: вкладки ===== */
   .tabs{display:flex;gap:4px;margin-bottom:10px;border-bottom:1px solid var(--line)}
@@ -840,7 +840,7 @@
 
   <div class="topbar">
     <span class="title">📞 Менеджер речевых модулей</span>
-    <button class="badge version-btn" id="versionBadge" style="font-size:11px;opacity:.8" title="Что нового?">v0.77</button>
+    <button class="badge version-btn" id="versionBadge" style="font-size:11px;opacity:.8" title="Что нового?">v0.80</button>
     <button class="secondary small-btn" id="changelogBtn" style="padding:3px 10px;font-size:11px">📋 Что нового</button>
     <label class="bool-toggle" id="autosaveWrap" style="display:none;margin-right:8px;font-size:12px">
       <input type="checkbox" id="autosaveChk" checked> автосохранение
@@ -3348,15 +3348,17 @@ function calcNextSlot(c, offsetHours){
     return { date: todayStr, time: pad(Math.floor(candM/60))+':'+pad(candM%60) };
   }
 
-  // иначе — следующие дни на время «с» карточки (или кандидата, если «с» нет),
+  // иначе — следующие дни на время переноса (candM = время звонка + offset),
   // пропуская выходные дни оператора (если график включён).
+  // Окно С-ДО — это рамки доступности клиента, а не время переноса,
+  // поэтому перенос всегда идёт от candM, а не от времени «С».
   for(let dayOffset=1; dayOffset<60; dayOffset++){
     const base = new Date(mskNow.getFullYear(), mskNow.getMonth(), mskNow.getDate()+dayOffset);
     const dateStr = fmtDate(base);
     if(countMskDay(dateStr) >= maxPerDay) continue;
     if(!isWorkingDay(dateStr)) continue;   // выходной — пропускаем
-    let m = (fromM!==null) ? fromM : candM;
-    if(m >= 24*60) m = (fromM!==null) ? fromM : 8*60;
+    let m = candM;
+    if(m >= 24*60) m = 8*60;
     if(!inWindow(m) || !okTime(m)) continue;
     return { date: dateStr, time: pad(Math.floor(m/60))+':'+pad(m%60) };
   }
@@ -3365,12 +3367,12 @@ function calcNextSlot(c, offsetHours){
     const base = new Date(mskNow.getFullYear(), mskNow.getMonth(), mskNow.getDate()+dayOffset);
     const dateStr = fmtDate(base);
     if(!isWorkingDay(dateStr)) continue;
-    const fm = (fromM!==null) ? fromM : 8*60;
+    const fm = candM >= 24*60 ? 8*60 : candM;
     return { date: dateStr, time: pad(Math.floor(fm/60))+':'+pad(fm%60) };
   }
   // крайний фоллбэк — завтра
   const d = new Date(mskNow.getFullYear(), mskNow.getMonth(), mskNow.getDate()+1);
-  const fm = (fromM!==null) ? fromM : 8*60;
+  const fm = candM >= 24*60 ? 8*60 : candM;
   return { date: fmtDate(d), time: pad(Math.floor(fm/60))+':'+pad(fm%60) };
 }
 /* Автосдвиг при НО/АО/Сброс: +3 часа (с учётом лимитов). */
@@ -3402,6 +3404,11 @@ function buildCallCard(c){
     if(title) b.title=title;
     b.onclick=(e)=>{e.stopPropagation(); handler&&handler();};
     return b;
+  }
+  /* Открыть ссылку «Звонок» (CRM) в новой вкладке, если она задана. */
+  function openCallLink(){
+    const lk=(c.links||[]).find(l=>l && l.label==='Звонок' && l.url && String(l.url).trim());
+    if(lk) window.open(String(lk.url).trim(), '_blank');
   }
 
   /* === Строка 1: когда | имя+телефон / комментарий | действия === */
@@ -3525,8 +3532,8 @@ function buildCallCard(c){
   // --- Блок 1: управление карточкой ---
   const ctrl = document.createElement('div'); ctrl.className='cb-block cb-ctrl';
   if(!c.archived){
-    ctrl.appendChild(actBtn('✓','ok','Дозвонился — указать результат',()=>{ openCallResultModal(c); }));
-    ctrl.appendChild(actBtn('×','danger','Удалить',()=>{ if(confirm('Удалить перезвон?')){ CALLS.items=CALLS.items.filter(x=>x.id!==c.id); callsMarkDirty(); renderCalls(); } }));
+    ctrl.appendChild(actBtn('✓','ok','Дозвонился — указать результат',()=>{ openCallResultModal(c); openCallLink(); }));
+    ctrl.appendChild(actBtn('×','danger','Удалить',()=>{ if(confirm('Удалить перезвон?')){ CALLS.items=CALLS.items.filter(x=>x.id!==c.id); callsMarkDirty(); renderCalls(); openCallLink(); } }));
     ctrl.appendChild(actBtn('✎','','Редактировать карточку',editHandler));
   } else {
     ctrl.appendChild(actBtn('↶','','Вернуть из архива',()=>{ c.archived=false; callsMarkDirty(); renderCalls(); }));
@@ -3541,14 +3548,14 @@ function buildCallCard(c){
     resBlock.appendChild(actBtn('АО/НО','ao','Нет ответа / автоответчик / сброс (перенос на +2.5ч, авт.)',()=>{ autoReschedule(c,'АО/НО'); c.archived=false; callsMarkDirty(); renderCalls(); }));
     resBlock.appendChild(actBtn('Перезв.','cb','Указать время перезвона',()=>{ const inline=card.querySelector('.reschedule-inline'); if(inline) inline.classList.toggle('open'); }));
   }
+  // Поле результата — всегда доступно для клика (редактирование без архивации).
+  // Позволяет фиксировать успешные записи без увода карточки в архив (например, запись + перезвон).
+  const rf=document.createElement('div'); rf.className='call-result-field';
   const callRes=(c.result||'').trim();
-  if(callRes){
-    const rf=document.createElement('div'); rf.className='call-result-field';
-    rf.textContent='📋 '+callRes+' ✎';
-    rf.title='Клик — изменить результат звонка';
-    rf.onclick=(e)=>{ e.stopPropagation(); openCallResultModal(c, true); };
-    resBlock.appendChild(rf);
-  }
+  rf.textContent = callRes ? '📋 '+callRes+' ✎' : '📝 результат…';
+  rf.title = callRes ? 'Клик — изменить результат звонка' : 'Клик — записать результат звонка';
+  rf.onclick=(e)=>{ e.stopPropagation(); openCallResultModal(c, true); };
+  resBlock.appendChild(rf);
   bottom.appendChild(resBlock);
 
   // --- Блок 3: ссылки (Звонок + админки) — скруглённые прямоугольники ---
@@ -4182,8 +4189,11 @@ function callOpenReschedule(id){
 }
 
 /* ===== Чейнджлог (что нового) ===== */
-const APP_VERSION = 'v0.77';
+const APP_VERSION = 'v0.80';
 const APP_CHANGELOG = [
+  { v:'v0.80', text:'Исправлен автоперенос (АО/НО): раньше время переноса бралось из окна С/ДО, из-за чего он ставился на «минимальное» время (например 16:25→18:00). Теперь перенос всегда +2,5–3ч от звонка (16:25→19:00), окно С/ДО — только рамка доступности.' },
+  { v:'v0.79', text:'Комментарий перезвона отображает переносы строк. Результат звонка можно записывать/редактировать прямо в карточке (без увода в архив) — удобно для «запись + перезвон».' },
+  { v:'v0.78', text:'При «Дозвонился» (✓) и при удалении перезвона автоматически открывается ссылка «Звонок» (CRM), если она задана. Крестики в списках enum/map больше не вылезают за обводку.' },
   { v:'v0.77', text:'Фикс таймзоны автопереноса (АО/НО): время последнего звонка теперь считается по МСК, а не по локальному времени компьютера оператора — перенос больше не уезжает на несколько часов вперёд у пользователей не в МСК.' },
   { v:'v0.76', text:'Мелкие правки: крестик удаления у enum-списка компактный (не вылезает за обводку); индикатор сохранения — зелёная плашка «✓ сохранено» с плавным автоскрытием.' },
   { v:'v0.75', text:'В форме перезвона рядом с С/ДО добавлен выпадающий список «следующий» — точное время следующего звонка (записывается как nextTime; дата берётся из даты перезвона), без рамок С/ДО. Поле номера телефона — строго числовое (tel/numeric): символ «+» и буквы невозможно ввести или вставить. Выделение карточки после копирования номера — заметная зелёная обводка (перекрывает состояния). Крестик удаления у переменной-списка enum стал компактным (не вылезает за обводку). Индикатор сохранения — зелёная плашка «✓ сохранено» с плавным автоскрытием (появление 0.5с, удержание ~3с, скрытие 2с). В истории звонков дата переноса отображается по-человечески (сегодня/завтра/вчера/«17 авг, пн»), а не сырым YYYY-MM-DD.' },
@@ -8499,5 +8509,6 @@ autosizeAll(document);
 
 
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f"}' crossorigin="anonymous"></script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v3d52b47920f24c319d37e2661827c42b1787588026925" integrity="sha512-d9sL6GJLXn6fInD1+TVXhTcQOsmxeHfmHAvwGDIxp5TO+uo1fiWW7mHomMj4MLRlCsJDTqXzWLHJFFlPCEIj/A==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f"}' crossorigin="anonymous"></script>
 </body>
 </html>
