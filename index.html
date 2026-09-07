@@ -840,7 +840,7 @@
 
   <div class="topbar">
     <span class="title">📞 Менеджер речевых модулей</span>
-    <button class="badge version-btn" id="versionBadge" style="font-size:11px;opacity:.8" title="Что нового?">v0.80</button>
+    <button class="badge version-btn" id="versionBadge" style="font-size:11px;opacity:.8" title="Что нового?">v0.82</button>
     <button class="secondary small-btn" id="changelogBtn" style="padding:3px 10px;font-size:11px">📋 Что нового</button>
     <label class="bool-toggle" id="autosaveWrap" style="display:none;margin-right:8px;font-size:12px">
       <input type="checkbox" id="autosaveChk" checked> автосохранение
@@ -2901,27 +2901,40 @@ function callTags(c){
   const tags = [];
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0,0,0,0);
+  const todayMs = today.getTime();
   const cd = parseDate(c.date);
-  const cdMs = cd ? cd.getTime() : today.getTime();
+  const cdMs = cd ? cd.getTime() : todayMs;   // нет даты = считаем «сегодня»
   const nowM = now.getHours()*60 + now.getMinutes();
   const f = parseTime(c.timeFrom);
   const t = parseTime(c.timeTo);
   const fromM = f ? (f.h*60+f.m) : null;
   const toM   = t ? (t.h*60+t.m) : null;
-  // фактическое время следующего перезвона (если есть — оно приоритетнее окна С-ДО)
+  // фактическое время следующего перезвона (если есть — приоритетнее окна С-ДО)
   const n = parseTime(c.nextTime);
   const nextM = n ? (n.h*60+n.m) : null;
 
-  if(cdMs > today.getTime()){ tags.push('upcoming'); return tags; } // дата в будущем
+  if(cdMs > todayMs){ tags.push('upcoming'); return tags; } // дата в будущем
 
-  tags.push('today'); // сегодня / прошлая дата / без даты — нужно сделать сегодня
+  // ДАТА В ПРОШЛОМ — перезвон просрочен: надо звонить сегодня как можно раньше.
+  // Никакие «не пора ещё» по времени дня тут не действуют (время из другого дня).
+  if(cd && cdMs < todayMs){
+    tags.push('today');
+    tags.push('overdue');
+    return tags;
+  }
 
-  // «не пора ещё»: если есть nextTime — по нему; иначе по времени «с» окна
-  if(nextM !== null && nowM < nextM) tags.push('upcoming');
-  else if(nextM === null && fromM !== null && nowM < fromM) tags.push('upcoming');
-
-  // просрочен (окно «до» уже прошло) — окно остаётся рамкой
-  if(toM !== null && nowM > toM) tags.push('overdue');
+  // ДАТА = СЕГОДНЯ (или нет даты): оцениваем по времени дня.
+  tags.push('today');
+  // время звонка сегодня: приоритет у nextTime, иначе время «с» окна
+  const whenM = (nextM !== null) ? nextM : fromM;
+  if(whenM !== null){
+    if(nowM < whenM) tags.push('upcoming');            // ещё не пора — сегодня, но вечером
+    else if(toM !== null && nowM > toM) tags.push('overdue'); // окно «до» уже прошло
+    else if(toM === null) tags.push('overdue');          // время звонка наступило и прошло
+    // (nowM >= whenM и время в пределах окна — просто актуально сейчас, без тега)
+  } else if(toM !== null && nowM > toM){
+    tags.push('overdue');                                // окно «до» прошло
+  }
   return tags;
 }
 /* Основной статус для сортировки и оформления карточки. */
@@ -3214,14 +3227,9 @@ function hmToMin(hhmm){
 /* Время последнего совершённого звонка (последняя запись истории, не «Перенос»)
    в минутах от полуночи МСК. Если истории нет — текущее время МСК. */
 function lastCallMinutes(c, now){
-  const hist = (c.history||[]).filter(h=>h && h.ts && h.result && h.result!=='Перенос');
-  if(hist.length){
-    // время последнего звонка — из ts записи (момент нажатия НО/АО/Сброс),
-    // приводим к МСК (DEFAULT_TZ_UTC), не завися от таймзоны браузера оператора.
-    const last = hist[hist.length-1];
-    const d = new Date(last.ts + now.getTimezoneOffset()*60000 + DEFAULT_TZ_UTC*3600*1000);
-    return d.getHours()*60 + d.getMinutes();
-  }
+  // АО/НО всегда означает «звонили сейчас и не дозвонились».
+  // Поэтому время для расчёта переноса — ТЕКУЩЕЕ время МСК (момент нажатия),
+  // а не время последней записи в истории (которая могла быть раньше).
   return now.getHours()*60 + now.getMinutes();
 }
 /* ============================================================
@@ -3341,6 +3349,10 @@ function calcNextSlot(c, offsetHours){
     return clientDateStrFromTs(h.ts, DEFAULT_TZ_UTC)===dateStr;
   }).length;
 
+  // Начало рабочего окна клиента (8:00 по его местному) в минутах от полуночи МСК.
+  // Локальное время клиента = МСК + shift, поэтому 8:00 местного = 8*60 - shift*60 (МСК).
+  const localStartM = ((8*60 - shift*60) % 1440 + 1440) % 1440;
+
   const todayStr = fmtDate(mskNow);
   // попытка в текущий день: кандидат сегодня, в БУДУЩЕМ относительно текущего времени,
   // в окне, допустим И сегодня — рабочий день.
@@ -3348,31 +3360,40 @@ function calcNextSlot(c, offsetHours){
     return { date: todayStr, time: pad(Math.floor(candM/60))+':'+pad(candM%60) };
   }
 
-  // иначе — следующие дни на время переноса (candM = время звонка + offset),
-  // пропуская выходные дни оператора (если график включён).
-  // Окно С-ДО — это рамки доступности клиента, а не время переноса,
-  // поэтому перенос всегда идёт от candM, а не от времени «С».
+  // иначе — следующие дни: сперва пробуем время переноса (candM = время звонка + offset),
+  // если оно допустимо в рабочем окне клиента; иначе — начало окна клиента (8:00 местного).
+  // Окно С-ДО — рамки доступности; время переноса не подменяем временем «С».
   for(let dayOffset=1; dayOffset<60; dayOffset++){
     const base = new Date(mskNow.getFullYear(), mskNow.getMonth(), mskNow.getDate()+dayOffset);
     const dateStr = fmtDate(base);
     if(countMskDay(dateStr) >= maxPerDay) continue;
     if(!isWorkingDay(dateStr)) continue;   // выходной — пропускаем
-    let m = candM;
-    if(m >= 24*60) m = 8*60;
-    if(!inWindow(m) || !okTime(m)) continue;
+    // сначала кандидат (+2.5ч), если он попадает в окно клиента и рабочие часы
+    if(candM < 24*60 && okTime(candM) && inWindow(candM)){
+      return { date: dateStr, time: pad(Math.floor(candM/60))+':'+pad(candM%60) };
+    }
+    // иначе — начало рабочего окна клиента (но не раньше времени «С», если оно задано)
+    let m = localStartM;
+    if(fromM!==null && m < fromM) m = fromM;
+    if(m >= 24*60) m = ((8*60) % 1440);
+    if(!okTime(m)) continue;
     return { date: dateStr, time: pad(Math.floor(m/60))+':'+pad(m%60) };
   }
-  // фоллбэк: ближайший рабочий день
+  // фоллбэк: ближайший рабочий день, начало рабочего окна клиента
   for(let dayOffset=1; dayOffset<60; dayOffset++){
     const base = new Date(mskNow.getFullYear(), mskNow.getMonth(), mskNow.getDate()+dayOffset);
     const dateStr = fmtDate(base);
     if(!isWorkingDay(dateStr)) continue;
-    const fm = candM >= 24*60 ? 8*60 : candM;
-    return { date: dateStr, time: pad(Math.floor(fm/60))+':'+pad(fm%60) };
+    let m = localStartM;
+    if(fromM!==null && m < fromM) m = fromM;
+    if(!okTime(m)) m = ((8*60) % 1440);
+    return { date: dateStr, time: pad(Math.floor(m/60))+':'+pad(m%60) };
   }
-  // крайний фоллбэк — завтра
+  // крайний фоллбэк — завтра, начало рабочего окна клиента
   const d = new Date(mskNow.getFullYear(), mskNow.getMonth(), mskNow.getDate()+1);
-  const fm = candM >= 24*60 ? 8*60 : candM;
+  let fm = localStartM;
+  if(fromM!==null && fm < fromM) fm = fromM;
+  if(!okTime(fm)) fm = ((8*60) % 1440);
   return { date: fmtDate(d), time: pad(Math.floor(fm/60))+':'+pad(fm%60) };
 }
 /* Автосдвиг при НО/АО/Сброс: +3 часа (с учётом лимитов). */
@@ -4189,8 +4210,10 @@ function callOpenReschedule(id){
 }
 
 /* ===== Чейнджлог (что нового) ===== */
-const APP_VERSION = 'v0.80';
+const APP_VERSION = 'v0.82';
 const APP_CHANGELOG = [
+  { v:'v0.82', text:'Фикс статусов и переноса: перезвон с датой в прошлом теперь всегда просроченный (красный, в «Актуальных»), а не зелёный. Автоперенос больше не ставит время за пределами рабочего окна клиента (раньше мог выдать 22:30/23:00) — при позднем переносе уходит на следующий рабочий день в начало окна (8:00 местного).' },
+  { v:'v0.81', text:'Автоперенос (АО/НО) теперь считает время от текущего момента нажатия (МСК), а не от последней записи в истории — перенос всегда +2,5–3ч, независимо от прошлых звонков.' },
   { v:'v0.80', text:'Исправлен автоперенос (АО/НО): раньше время переноса бралось из окна С/ДО, из-за чего он ставился на «минимальное» время (например 16:25→18:00). Теперь перенос всегда +2,5–3ч от звонка (16:25→19:00), окно С/ДО — только рамка доступности.' },
   { v:'v0.79', text:'Комментарий перезвона отображает переносы строк. Результат звонка можно записывать/редактировать прямо в карточке (без увода в архив) — удобно для «запись + перезвон».' },
   { v:'v0.78', text:'При «Дозвонился» (✓) и при удалении перезвона автоматически открывается ссылка «Звонок» (CRM), если она задана. Крестики в списках enum/map больше не вылезают за обводку.' },
@@ -8509,6 +8532,6 @@ autosizeAll(document);
 
 
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f"}' crossorigin="anonymous"></script>
-<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v3d52b47920f24c319d37e2661827c42b1787588026925" integrity="sha512-d9sL6GJLXn6fInD1+TVXhTcQOsmxeHfmHAvwGDIxp5TO+uo1fiWW7mHomMj4MLRlCsJDTqXzWLHJFFlPCEIj/A==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f"}' crossorigin="anonymous"></script>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a37454a4bae69d3a',t:'MTc4ODc2OTYwOA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","spa":2}' crossorigin="anonymous"></script>
 </body>
 </html>
