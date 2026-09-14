@@ -840,7 +840,7 @@
 
   <div class="topbar">
     <span class="title">📞 Менеджер речевых модулей</span>
-    <button class="badge version-btn" id="versionBadge" style="font-size:11px;opacity:.8" title="Что нового?">v0.82</button>
+    <button class="badge version-btn" id="versionBadge" style="font-size:11px;opacity:.8" title="Что нового?">v0.83</button>
     <button class="secondary small-btn" id="changelogBtn" style="padding:3px 10px;font-size:11px">📋 Что нового</button>
     <label class="bool-toggle" id="autosaveWrap" style="display:none;margin-right:8px;font-size:12px">
       <input type="checkbox" id="autosaveChk" checked> автосохранение
@@ -2893,8 +2893,8 @@ function todayDateStr(){ return fmtDate(new Date()); }
 /* Система тегов звонка. У одного звонка может быть несколько тегов:
    - archived  — в архиве;
    - today     — актуален сегодня (дата сегодня/прошлая/нет даты) — «надо сегодня»;
-   - upcoming  — будущий (дата в будущем) ИЛИ время «с» ещё не наступило;
-   - overdue   — просрочен (есть «до» и окно уже прошло).
+   - upcoming  — будущий (дата в будущем) ИЛИ время «с»/«след» ещё не наступило;
+   - overdue   — просрочен: либо «до» прошло, либо дата в прошлом (звонок не сделан).
    Фильтры сортируют по наличию тега. */
 function callTags(c){
   if(c.archived) return ['archived'];
@@ -2917,6 +2917,7 @@ function callTags(c){
 
   // ДАТА В ПРОШЛОМ — перезвон просрочен: надо звонить сегодня как можно раньше.
   // Никакие «не пора ещё» по времени дня тут не действуют (время из другого дня).
+  // Карточка красная и показывается в «⏰ Просроченные» (не в «Актуальные»).
   if(cd && cdMs < todayMs){
     tags.push('today');
     tags.push('overdue');
@@ -2925,16 +2926,19 @@ function callTags(c){
 
   // ДАТА = СЕГОДНЯ (или нет даты): оцениваем по времени дня.
   tags.push('today');
-  // время звонка сегодня: приоритет у nextTime, иначе время «с» окна
-  const whenM = (nextM !== null) ? nextM : fromM;
-  if(whenM !== null){
-    if(nowM < whenM) tags.push('upcoming');            // ещё не пора — сегодня, но вечером
-    else if(toM !== null && nowM > toM) tags.push('overdue'); // окно «до» уже прошло
-    else if(toM === null) tags.push('overdue');          // время звонка наступило и прошло
-    // (nowM >= whenM и время в пределах окна — просто актуально сейчас, без тега)
+  // Красным (overdue) только если просрочено «ДО». Прошедшие «С» и «след»
+  // НЕ просрочивают — это не «до», а начало окна / точное время: после них
+  // звонок просто актуален (пора звонить), карточка остаётся нейтральной.
+  if(nextM !== null){
+    // «след» — точное время следующего звонка.
+    if(nowM < nextM) tags.push('upcoming');              // ещё не пора — сегодня, но позже
+    if(toM !== null && nowM > toM) tags.push('overdue');  // если задано «ДО» и оно прошло — просрочка
+  } else if(fromM !== null && nowM < fromM){
+    tags.push('upcoming');                                // время «С» ещё не наступило
   } else if(toM !== null && nowM > toM){
-    tags.push('overdue');                                // окно «до» прошло
+    tags.push('overdue');                                  // окно «ДО» прошло
   }
+  // (время «С»/«след» наступило, а «ДО» нет или ещё впереди — просто актуально сейчас, без тега)
   return tags;
 }
 /* Основной статус для сортировки и оформления карточки. */
@@ -3124,8 +3128,9 @@ function callsFilterList(items){
     const tg = callTags(c);
     if(filter==='all') return !c.archived;
     if(filter==='archived') return c.archived;
-    // active = не в архиве и НЕ будущий (время «с» не наступило или дата в будущем)
-    if(filter==='active') return !c.archived && !tg.includes('upcoming');
+    // active = «пора звонить»: не в архиве, НЕ будущий (время «С»/«след» не наступило
+    // или дата в будущем) и НЕ просроченный — красные показываются в «⏰ Просроченные».
+    if(filter==='active') return !c.archived && !tg.includes('upcoming') && !tg.includes('overdue');
     return tg.includes(filter);                        // today / upcoming / overdue по тегу
   });
 }
@@ -3135,18 +3140,16 @@ let _callsNewFormVisible = false;
 let LAST_COPIED_CALL_ID = null; // id карточки, из которой последним скопирован номер
 
 /* Счётчик актуальных задач на кнопке вкладки «Перезвоны».
-   Актуальные = не в архиве и дата не в будущем (сегодня/вчера/без даты) —
-   т.е. есть что делать, даже если время «с» ещё не наступило. */
+   Считает ровно то, что попадает во вкладку «Актуальные»: не в архиве,
+   не будущие (ещё не время «С»/«след», дата в будущем) и не просроченные
+   (красные — во вкладке «⏰ Просроченные»). */
 function updateCallsBadge(){
   const badge = document.getElementById('callsBadge');
   if(!badge) return;
-  // Актуальные = не в архиве и активны сегодня (тег today),
-  // т.е. не будущие (upcoming) и не просроченные-в-архиве.
   const n = (CALLS.items||[]).filter(c=>{
     if(c.archived) return false;
     const tg = callTags(c);
-    // актуально, если есть тег today и нет тега upcoming
-    return tg.includes('today') && !tg.includes('upcoming');
+    return tg.includes('today') && !tg.includes('upcoming') && !tg.includes('overdue');
   }).length;
   if(n>0){ badge.style.display='inline-block'; badge.textContent = n>99 ? '99+' : n; }
   else badge.style.display='none';
@@ -4210,8 +4213,9 @@ function callOpenReschedule(id){
 }
 
 /* ===== Чейнджлог (что нового) ===== */
-const APP_VERSION = 'v0.82';
+const APP_VERSION = 'v0.83';
 const APP_CHANGELOG = [
+  { v:'v0.83', text:'Фикс статуса: прошедшие «С» и «след» больше не делают карточку красной — красный статус только если просрочено «ДО» или дата в прошлом. Красные (просроченные) карточки больше не показываются во вкладке «Актуальные» — они в «⏰ Просроченные»; «Актуальные» — только нейтральные «пора звонить».' },
   { v:'v0.82', text:'Фикс статусов и переноса: перезвон с датой в прошлом теперь всегда просроченный (красный, в «Актуальных»), а не зелёный. Автоперенос больше не ставит время за пределами рабочего окна клиента (раньше мог выдать 22:30/23:00) — при позднем переносе уходит на следующий рабочий день в начало окна (8:00 местного).' },
   { v:'v0.81', text:'Автоперенос (АО/НО) теперь считает время от текущего момента нажатия (МСК), а не от последней записи в истории — перенос всегда +2,5–3ч, независимо от прошлых звонков.' },
   { v:'v0.80', text:'Исправлен автоперенос (АО/НО): раньше время переноса бралось из окна С/ДО, из-за чего он ставился на «минимальное» время (например 16:25→18:00). Теперь перенос всегда +2,5–3ч от звонка (16:25→19:00), окно С/ДО — только рамка доступности.' },
@@ -8532,6 +8536,6 @@ autosizeAll(document);
 
 
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f"}' crossorigin="anonymous"></script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a37454a4bae69d3a',t:'MTc4ODc2OTYwOA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","spa":2}' crossorigin="anonymous"></script>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a3ad950199a8e923',t:'MTc4OTM2OTkzMw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","spa":2}' crossorigin="anonymous"></script>
 </body>
 </html>
