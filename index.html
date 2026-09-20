@@ -223,6 +223,7 @@
   .tile-when .tw-date{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
    .tile-when .tw-date .date{font-size:14px;font-weight:600;color:#c8d3e8}
   .tile-when .tw-date .created{font-size:11px;color:#6b7890}
+  .tile-when .tw-date .was-date{font-size:11px;color:#e08a8e}
   /* подблок: история */
   .tile-when .tw-hist{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
    .tile-when .tw-hist .lbl{font-size:12px;color:var(--muted)}
@@ -840,7 +841,7 @@
 
   <div class="topbar">
     <span class="title">📞 Менеджер речевых модулей</span>
-    <button class="badge version-btn" id="versionBadge" style="font-size:11px;opacity:.8" title="Что нового?">v0.83</button>
+    <button class="badge version-btn" id="versionBadge" style="font-size:11px;opacity:.8" title="Что нового?">v0.84</button>
     <button class="secondary small-btn" id="changelogBtn" style="padding:3px 10px;font-size:11px">📋 Что нового</button>
     <label class="bool-toggle" id="autosaveWrap" style="display:none;margin-right:8px;font-size:12px">
       <input type="checkbox" id="autosaveChk" checked> автосохранение
@@ -2829,6 +2830,33 @@ function ensureCallsShape(){
     if(!c.links) c.links = [];
     if(typeof c.archived !== 'boolean') c.archived = false;
   });
+  // Пропущенные (дата в прошлом) — автоматически переносим на сегодня.
+  rollOverMissedCalls();
+}
+/* Автоперенос пропущенных перезвонов: если дата звонка уже в прошлом (звонок не сделан),
+   переносим её на сегодня. Карточка остаётся красной (movedFrom помнит исходную дату)
+   и попадает в «⏰ Просроченные»/«Сегодня». В историю пишется запись «Перенос».
+   Идемпотентно: после переноса дата = сегодня, повторных записей не будет. */
+function rollOverMissedCalls(){
+  if(!CALLS || !Array.isArray(CALLS.items)) return;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const todayStr = fmtDate(today);
+  let changed = false;
+  CALLS.items.forEach(c=>{
+    if(c.archived) return;
+    const cd = parseDate(c.date);
+    if(!cd || cd.getTime() >= today.getTime()) return;
+    c.history.push({
+      ts: Date.now(), result:'Перенос',
+      oldDate: c.date, oldFrom: '', oldTo: '',
+      newDate: todayStr, newFrom: '', newTo: '',
+      reason: 'Дата прошла — звонок не сделан, автоперенос на сегодня'
+    });
+    if(!c.movedFrom) c.movedFrom = c.date;
+    c.date = todayStr;
+    changed = true;
+  });
+  if(changed) callsMarkDirty();
 }
 /* Парсить YYYY-MM-DD в локальную дату (полночь). */
 function parseDate(s){
@@ -2899,6 +2927,10 @@ function todayDateStr(){ return fmtDate(new Date()); }
 function callTags(c){
   if(c.archived) return ['archived'];
   const tags = [];
+  // Пропущенный звонок, автоматически перенесённый на сегодня (movedFrom — исходная дата):
+  // остаётся «сегодняшним» и просроченным (красным), пока оператор не дозвонится
+  // и не перенесёт его на конкретное время.
+  if(c.movedFrom){ tags.push('today'); tags.push('overdue'); return tags; }
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0,0,0,0);
   const todayMs = today.getTime();
@@ -3072,6 +3104,9 @@ function callResultLabel(id){ return (CALLS?.results||[]).includes(id)?id:''; }
 /* Минуты от полуночи по фактическому времени следующего перезвона (nextTime),
    иначе по окну С-ДО (timeFrom/timeTo). Без всего — большой (в конец). */
 function callDayMinutes(c){
+  // Перенесённый со вчерашнего пропущенный звонок — «на самое раннее»:
+  // всегда первым в группе просроченных.
+  if(c.movedFrom) return 0;
   if(c.nextTime){
     const n = parseTime(c.nextTime);
     if(n) return n.h*60+n.m;
@@ -3414,6 +3449,7 @@ function autoReschedule(c, resultLabel){
   c.nextDate = slot.date;
   c.nextTime = slot.time;
   c.date = slot.date; // дата следующего звонка
+  c.movedFrom = '';   // оператор перенёс — метка «пропущен» снимается
   // timeFrom/timeTo не трогаем — они информационные рамки
 }
 
@@ -3475,6 +3511,13 @@ function buildCallCard(c){
   const date = document.createElement('span'); date.className='date';
   date.textContent = fmtCallDate(c.date) || c.date || '';
   twDate.appendChild(date);
+  if(c.movedFrom){
+    const was = document.createElement('span'); was.className='was-date';
+    const md = parseDate(c.movedFrom);
+    was.textContent = 'был '+(md ? md.toLocaleDateString('ru-RU',{day:'2-digit',month:'2-digit'}) : c.movedFrom);
+    was.title = 'Исходная дата: звонок не был сделан, автоперенесён на сегодня';
+    twDate.appendChild(was);
+  }
   if(c.created){
     const created = document.createElement('span'); created.className='created';
     created.textContent = 'создан '+new Date(c.created).toLocaleString('ru-RU',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
@@ -3639,6 +3682,7 @@ function buildCallCard(c){
     c.nextDate = dateIn.value;
     c.nextTime = timeIn.value;
     c.date = dateIn.value;
+    c.movedFrom='';   // оператор перенёс — метка «пропущен» снимается
     c.archived=false;
     inlineForm.classList.remove('open');
     callsMarkDirty(); renderCalls();
@@ -3712,6 +3756,7 @@ function buildRescheduleForm(c){
     });
     c.nextDate = in1.value; c.nextTime = in2.value;
     c.date = in1.value;
+    c.movedFrom = '';   // оператор перенёс — метка «пропущен» снимается
     if(c.archived) c.archived = false;
     c._rescheduleOpen = false;
     callsMarkDirty(); renderCalls();
@@ -3980,7 +4025,7 @@ function buildCallForm(c){
       payload.nextDate = payload.nextTime = '';
     }
     if(isEdit){
-      Object.assign(c,payload); c._editOpen=false;
+      Object.assign(c,payload); c.movedFrom=''; c._editOpen=false; // редактирование снимает метку «пропущен»
     } else {
       CALLS.items.push(newCall(payload));
       _callsNewFormVisible=false;
@@ -4213,8 +4258,9 @@ function callOpenReschedule(id){
 }
 
 /* ===== Чейнджлог (что нового) ===== */
-const APP_VERSION = 'v0.83';
+const APP_VERSION = 'v0.84';
 const APP_CHANGELOG = [
+  { v:'v0.84', text:'Пропущенные перезвоны автоматически переносятся на сегодня: если дата звонка прошла, а звонок не сделан, дата сдвигается на сегодня — карточка остаётся красной, попадает в «⏰ Просроченные» и «Сегодня», в плитке даты появляется пометка «был 11.08». Исходная дата пишется в историю («Перенос»). После АО/НО, «Перезвонить», ручного переноса или правки карточки метка «пропущен» снимается и статус становится обычным. В группе просроченных перенесённые звонки — первыми («на самое раннее»).' },
   { v:'v0.83', text:'Фикс статуса: прошедшие «С» и «след» больше не делают карточку красной — красный статус только если просрочено «ДО» или дата в прошлом. Красные (просроченные) карточки больше не показываются во вкладке «Актуальные» — они в «⏰ Просроченные»; «Актуальные» — только нейтральные «пора звонить».' },
   { v:'v0.82', text:'Фикс статусов и переноса: перезвон с датой в прошлом теперь всегда просроченный (красный, в «Актуальных»), а не зелёный. Автоперенос больше не ставит время за пределами рабочего окна клиента (раньше мог выдать 22:30/23:00) — при позднем переносе уходит на следующий рабочий день в начало окна (8:00 местного).' },
   { v:'v0.81', text:'Автоперенос (АО/НО) теперь считает время от текущего момента нажатия (МСК), а не от последней записи в истории — перенос всегда +2,5–3ч, независимо от прошлых звонков.' },
@@ -8515,7 +8561,8 @@ function renderCallsIfIdle(){
   renderCalls();
 }
 setInterval(()=>{
-  // Обновляем бейдж актуальных перезвонов на кнопке вкладки — независимо от открытой вкладки.
+  // Автоперенос просроченных на сегодня + бейдж актуальных — независимо от открытой вкладки.
+  if(typeof rollOverMissedCalls==='function') rollOverMissedCalls();
   if(typeof updateCallsBadge==='function') updateCallsBadge();
   if(MODE==='calls') renderCallsIfIdle();
 }, 30000);
@@ -8536,6 +8583,6 @@ autosizeAll(document);
 
 
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f"}' crossorigin="anonymous"></script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a3ad950199a8e923',t:'MTc4OTM2OTkzMw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","spa":2}' crossorigin="anonymous"></script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","spa":2}' crossorigin="anonymous"></script>
 </body>
 </html>
