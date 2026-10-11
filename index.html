@@ -841,7 +841,7 @@
 
   <div class="topbar">
     <span class="title">📞 Менеджер речевых модулей</span>
-    <button class="badge version-btn" id="versionBadge" style="font-size:11px;opacity:.8" title="Что нового?">v0.84</button>
+    <button class="badge version-btn" id="versionBadge" style="font-size:11px;opacity:.8" title="Что нового?">v0.85</button>
     <button class="secondary small-btn" id="changelogBtn" style="padding:3px 10px;font-size:11px">📋 Что нового</button>
     <label class="bool-toggle" id="autosaveWrap" style="display:none;margin-right:8px;font-size:12px">
       <input type="checkbox" id="autosaveChk" checked> автосохранение
@@ -2949,7 +2949,7 @@ function callTags(c){
 
   // ДАТА В ПРОШЛОМ — перезвон просрочен: надо звонить сегодня как можно раньше.
   // Никакие «не пора ещё» по времени дня тут не действуют (время из другого дня).
-  // Карточка красная и показывается в «⏰ Просроченные» (не в «Актуальные»).
+  // Карточка красная и видна в «⏰ Просроченные» и в «Актуальные».
   if(cd && cdMs < todayMs){
     tags.push('today');
     tags.push('overdue');
@@ -3163,9 +3163,10 @@ function callsFilterList(items){
     const tg = callTags(c);
     if(filter==='all') return !c.archived;
     if(filter==='archived') return c.archived;
-    // active = «пора звонить»: не в архиве, НЕ будущий (время «С»/«след» не наступило
-    // или дата в будущем) и НЕ просроченный — красные показываются в «⏰ Просроченные».
-    if(filter==='active') return !c.archived && !tg.includes('upcoming') && !tg.includes('overdue');
+    // active = всё, что надо позвонить сегодня: не в архиве и НЕ будущий (время «С»/«след»
+    // ещё не наступило или дата в будущем). Красные (просроченные, перенесённые со вчера)
+    // видны и здесь, и в «⏰ Просроченные» (отдельный список красных).
+    if(filter==='active') return !c.archived && !tg.includes('upcoming');
     return tg.includes(filter);                        // today / upcoming / overdue по тегу
   });
 }
@@ -3175,16 +3176,16 @@ let _callsNewFormVisible = false;
 let LAST_COPIED_CALL_ID = null; // id карточки, из которой последним скопирован номер
 
 /* Счётчик актуальных задач на кнопке вкладки «Перезвоны».
-   Считает ровно то, что попадает во вкладку «Актуальные»: не в архиве,
-   не будущие (ещё не время «С»/«след», дата в будущем) и не просроченные
-   (красные — во вкладке «⏰ Просроченные»). */
+   Считает ровно то, что попадает во вкладку «Актуальные»: не в архиве и
+   не будущие (ещё не время «С»/«след», дата в будущем). Просроченные
+   (красные, перенесённые со вчера) учитываются — они тоже «надо позвонить сегодня». */
 function updateCallsBadge(){
   const badge = document.getElementById('callsBadge');
   if(!badge) return;
   const n = (CALLS.items||[]).filter(c=>{
     if(c.archived) return false;
     const tg = callTags(c);
-    return tg.includes('today') && !tg.includes('upcoming') && !tg.includes('overdue');
+    return tg.includes('today') && !tg.includes('upcoming');
   }).length;
   if(n>0){ badge.style.display='inline-block'; badge.textContent = n>99 ? '99+' : n; }
   else badge.style.display='none';
@@ -4258,8 +4259,9 @@ function callOpenReschedule(id){
 }
 
 /* ===== Чейнджлог (что нового) ===== */
-const APP_VERSION = 'v0.84';
+const APP_VERSION = 'v0.85';
 const APP_CHANGELOG = [
+  { v:'v0.85', text:'Просроченные звонки (включая перенесённые со вчера) снова отображаются во вкладке «Актуальные» вместе с нейтральными: «Актуальные» — всё, что надо позвонить сегодня, включая красные. «⏰ Просроченные» остаётся отдельным списком красных. Счётчик на кнопке «Перезвоны» согласован со вкладкой.' },
   { v:'v0.84', text:'Пропущенные перезвоны автоматически переносятся на сегодня: если дата звонка прошла, а звонок не сделан, дата сдвигается на сегодня — карточка остаётся красной, попадает в «⏰ Просроченные» и «Сегодня», в плитке даты появляется пометка «был 11.08». Исходная дата пишется в историю («Перенос»). После АО/НО, «Перезвонить», ручного переноса или правки карточки метка «пропущен» снимается и статус становится обычным. В группе просроченных перенесённые звонки — первыми («на самое раннее»).' },
   { v:'v0.83', text:'Фикс статуса: прошедшие «С» и «след» больше не делают карточку красной — красный статус только если просрочено «ДО» или дата в прошлом. Красные (просроченные) карточки больше не показываются во вкладке «Актуальные» — они в «⏰ Просроченные»; «Актуальные» — только нейтральные «пора звонить».' },
   { v:'v0.82', text:'Фикс статусов и переноса: перезвон с датой в прошлом теперь всегда просроченный (красный, в «Актуальных»), а не зелёный. Автоперенос больше не ставит время за пределами рабочего окна клиента (раньше мог выдать 22:30/23:00) — при позднем переносе уходит на следующий рабочий день в начало окна (8:00 местного).' },
@@ -8583,6 +8585,6 @@ autosizeAll(document);
 
 
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f"}' crossorigin="anonymous"></script>
-<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","spa":2}' crossorigin="anonymous"></script>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a48ba38e49d2f0ff',t:'MTc5MTY5ODM2Nw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4bc70e2c01a94c73b74392e4234840661791215815920" integrity="sha512-L0ha0OXavK/8okipN9F8BtP84dg9DUhPERbBXzwI6dgTA55d2+yweo3pn5CSFYs45/r8md2+xvUPtTdvTNRfjA==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","spa":2}' crossorigin="anonymous"></script>
 </body>
 </html>
